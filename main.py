@@ -5,12 +5,16 @@ import time
 import requests
 import re
 import random
-#from rapidocr import RapidOCR
+import shutil
+from paddleocr import TextRecognition
+
+helper.logmessage("loading paddlepaddle")
+ocr = TextRecognition(
+    model_name="PP-OCRv5_server_rec",
+    model_dir="./paddle_custom"
+)
 
 session = requests.session()
-# ocrEngine = RapidOCR(
-#     params={"Global.lang_det": "en_mobile", "Global.lang_rec": "en_mobile"}
-# )
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0',
@@ -30,9 +34,19 @@ headers = {
 
 tsFileRegex = re.compile('(.*.ts)')
 m3u8Regex = re.compile('source[\': ]+(.*)\',')
+runTime = int(time.time())
+
+def numbersOnly(text):
+    strippedNumber = ""
+    for i in range(len(text)):
+        if text[i].isdigit():
+            strippedNumber = strippedNumber + text[i]
+    return strippedNumber
+
+
 
 def getM3u8(url):
-    helper.logmessage("getting m3u8")
+    helper.logmessage("=============== getting m3u8 ================")
     videoFeed = requests.get(url, headers=headers)
     if videoFeed.status_code != 200:
         helper.logmessage(f"error fetching playlist, http {videoFeed.status_code} received")
@@ -45,23 +59,46 @@ def getM3u8(url):
 
 
 def downloadVideo(m3u8url):
-    helper.logmessage("downloading video")
+    helper.logmessage("============= downloading video =============")
     m3u8Payload = requests.get(m3u8url, headers=headers)
     if m3u8Payload.status_code != 200:
         helper.logmessage(f"error fetching video, http {m3u8Payload.status_code} received")
         return False
     tsFiles = tsFileRegex.findall(m3u8Payload.text)
+
     if len(tsFiles) == 0:
         helper.logmessage(f"could not find files in playlist")
         return False
+
     tsFileUrl = m3u8url.split("playlist.m3u8")[0] + tsFiles[-1]
     videoFile = session.get(tsFileUrl, headers=headers)
+
     with open("video.ts", "wb") as f:
         f.write(videoFile.content)
+
     return "video.ts"
 
-def getFrame(file, randomFrame=False):
-    helper.logmessage("cleaning frames")
+def checkClock(filename):
+    #helper.logmessage(f"ocring {filename}")
+    result = ocr.predict(filename)
+    clock = ""
+
+    for res in result:
+        tempClock = res['rec_text']
+        tempClock = numbersOnly(tempClock)
+        if len(tempClock) != 4:
+            helper.logmessage(f"issue during ocr - ocr: {res['rec_text']}, cleaned: {tempClock}")
+            errorFileName = f"errors/{filename.split('/')[-1]}"
+            shutil.copy(filename, errorFileName)
+            with open(errorFileName.replace("jpg", "txt"), "w") as f:
+                f.write(f"ocr: {res['rec_text']}, cleaned: {tempClock}")
+        else:
+            clock = tempClock
+
+    return clock
+
+def getFrames(file, randomFrame=False):
+    helper.logmessage("============ parse frames and ocr ===========")
     if not os.path.isfile(file):
         helper.logmessage(f"{file} does not exist")
         return False
@@ -85,68 +122,144 @@ def getFrame(file, randomFrame=False):
     First Clock
     x: 650
     y: 0
-    w: 230
-    h: 80
-    this is "crop=230:80:650:0"
+    w: 240
+    h: 90
+    this is "crop=240:90:650:0"
 
     Second Clock
-    x: 870
+    x: 890
     y: 10
-    w: 230
+    w: 240
     h: 90
-    this is "crop=230:90:870:10"
+    this is "crop=240:90:890:10"
 
     Third Clock
-    x: 870
-    y: 10
-    w: 230
+    x: 1130
+    y: 15
+    w: 240
     h: 90
-    this is "crop=230:90:870:10"
+    this is "crop=240:90:1150:15"
 
     Fourth Clock
-    x: 870
-    y: 10
-    w: 230
-    h: 90
-    this is "crop=230:90:870:10"
+    x: 1580
+    y: 35
+    w: 240
+    h: 100
+    this is "crop=240:100:1580:35"
+
+    Fifth Clock
+    x: 1830
+    y: 40
+    w: 240
+    h: 100
+    this is "crop=240:100:1830:40"
+
+    Sixth Clock
+    x: 2070
+    y: 65
+    w: 240
+    h: 100
+    this is "crop=240:100:2070:65"
 
     """
-    filenames = []
-    #clocks = [("left", "crop=720:110:650:0,drawbox=x=0:y=80:w=160:h=30:color=black:t=fill"), ("right", "crop=800:130:1550:40")]
-    clocks = [("clock1", "crop=230:80:650:0")]
+    clocks = [("clock1", "crop=240:90:650:0"), ("clock2", "crop=240:90:890:10"), ("clock3", "crop=240:90:1130:20"), ("clock4", "crop=240:100:1580:35"), ("clock5", "crop=240:100:1830:40"), ("clock6", "crop=240:100:2070:65")]
+    timerTimes = []
     frame = 2
     if random:
-        frame = random.randint(1, 6000)
+        frame = 169#random.randint(1, 6000)
     for clock in clocks:
-        filename = f"tests/%04d-{clock[0]}.jpg"
-        filenames.append(filename)
+        #filename = f"live/{clock[0]}/{runTime}-%04d-{clock[0]}.jpg"
+        filename = f"live/{runTime}-{clock[0]}.jpg"
         command = [
             "ffmpeg",
             "-i", file,
-            #'-vf', f'select=eq(n\,{frame}),{clock[1]}',
-            #'-vframes', '1',
-            '-vf', f'fps=1/4,{clock[1]}',
+            '-vf', f'select=eq(n\,{frame}),{clock[1]}',
+            '-vframes', '1',
+            #'-vf', f'fps=1/4,{clock[1]}',
             filename
         ]
         commandExec = subprocess.run(command, capture_output=False, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
         if commandExec.returncode != 0:
             helper.logmessage("something went wrong when cutting frames")
             return False
-    return filenames
 
-def ocrFrame(filename):
-    helper.logmessage(f"ocring {filename}")
-    result = ocrEngine(filename)
-    helper.logmessage(result.txts)
-    helper.logmessage(result.scores)
+        timerResult = checkClock(filename)
+        timerTimes.append(timerResult)
+        helper.logmessage(f"{clock[0]} result: {timerResult}")
+
+        try:
+            os.remove(filename)
+        except Exception as e:
+            helper.logmessage(f"could not delete {filename}, error below:")
+            helper.logmessage(e)
+
+    return timerTimes
 
 
 angelcamUrl = "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"
 
-#lem3u8 = getM3u8(angelcamUrl)
-#downloadedVideoFile = downloadVideo(lem3u8)
-downloadedVideoFile = "record.ts"
-frames = getFrame(downloadedVideoFile, randomFrame=True)
+lem3u8 = getM3u8(angelcamUrl)
+downloadedVideoFile = downloadVideo(lem3u8)
 
-#for frame in frames:
-#    ocrFrame(frame)
+# Using a tuple cause lazy - (currentTimer, hasAlerted, lastResetTime)
+# currentTimer is the current number on the board
+# hasAlerted is whether there was an alert recently (redundant?)
+# lastResetTime is when the clock was last reset to 6000 (60:00) or hit 0000 (00:00)
+trackedTimers = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
+
+
+downloadedVideoFile = "250601-record-partone.ts"
+liveTimers = getFrames(downloadedVideoFile, randomFrame=True)
+
+
+helper.logmessage("============== checking timers ==============")
+for counter in range(len(liveTimers)):
+    # compare the timers and their many different states
+    try:
+        currentTime = int(liveTimers[counter])
+        trackedTime = trackedTimers[counter][0]
+        lastResetTime = trackedTimers[counter][2]
+
+        # case 1: trackedTime = 6000 and currentTime < trackedTime
+        # alert if hasAlerted is False, otherwise just ignore
+        if currentTime < trackedTime and trackedTime == 6000:
+            helper.logmessage(f"timer {counter} triggered, steak challenge is on")
+            if trackedTimers[counter][1]:
+                helper.logmessage("here is an alert to discord")
+            trackedTimers[counter] = (currentTime, True, lastResetTime)
+
+        # case 2: trackedTime < 6000 and currentTime < trackedTime
+        # update the timer but don't send any alerts
+        elif currentTime < trackedTime:
+            trackedTimers[counter] = (currentTime, trackedTimers[counter][1], lastResetTime)
+
+        # case 3: currentTime hits zero or 6000
+        # set the timer to zero, reset the alert flag, and also update lastResetTime
+        elif currentTime == 0 or currentTime == 6000:
+            trackedTimers[counter] = (currentTime, False, helper.getCurrTimeInInt())
+        
+        # case 4: currentTime > trackedTime but the clock was never reset
+        # this is an odd scenario where the same timer is reused due to many
+        # challengers. Because this script polls every minute, it may miss the 
+        # overlap between resetting and starting the timer again
+        # 
+        # should only alert again IF the last reset was over 20 minutes ago
+        elif currentTime > trackedTime:
+            if int(time.time()) > (lastResetTime + 1200):
+                helper.logmessage("here is an alert to discord")
+                trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
+            else:
+                trackedTimers[counter] = (currentTime, False, lastResetTime)
+
+        # case 5: how does this every happen? log something and just capture it
+        else:
+            helper.logmessage("how did we get here?")
+            helper.logmessage(f"current time for timer {counter}: {currentTime}")
+            helper.logmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
+
+
+    except ValueError as e:
+        helper.logmessage(f"couldn't parse timer {counter}, ignoring for now")
+
+sleeptime = 60
+helper.logmessage(f"========== sleeping for {sleeptime} seconds ==========")

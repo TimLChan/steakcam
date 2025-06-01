@@ -1,6 +1,6 @@
 from datetime import datetime
 import pytz
-import os
+import time
 
 def logmessage(msg=""):
     print(('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
@@ -21,3 +21,6 @@ def getTime():
 
 def getDateTime():
     return str(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%b %d - %I:%M:%S %p %Z'))
+
+def getCurrTimeInInt():
+    return int(time.time())

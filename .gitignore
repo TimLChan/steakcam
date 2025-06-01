@@ -194,7 +194,8 @@ cython_debug/
 .cursorindexingignore
 
 # Custom
-tests/*
 backup/*
-*.ts
+tests/*
+training/*
 *.jpg
+*.ts
