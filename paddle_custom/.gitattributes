@@ -1,3 +1,1 @@
-inference.json filter=lfs diff=lfs merge=lfs -text
 inference.pdiparams filter=lfs diff=lfs merge=lfs -text
-inference.yml filter=lfs diff=lfs merge=lfs -text
