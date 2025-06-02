@@ -1,0 +1,4 @@
+pytz
+paddleocr
+requests
+paddlepaddle

@@ -28,4 +28,4 @@ bored
 - [x] finetuning ocr model
 - [x] logic to ocr the image
 - [x] track changes to the clocks
-- [ ] send an alert on discord
+- [x] send an alert on discord

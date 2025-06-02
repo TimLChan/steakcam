@@ -1,0 +1,11 @@
+{
+    "discord": {
+        "name": "steakbot",
+        "avatar": "https://i.imgur.com/i47ZVNr.png",
+        "webhooks": {
+            "name": "",
+            "url": ""
+        }
+
+    }
+}

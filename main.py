@@ -219,7 +219,7 @@ def getFrames(file, randomFrame=False):
 while True:
     isWithin = helper.withinTimePeriod("08:00", "22:30", timezone)
     sleeptime = 60
-    
+
     # sleep for 5-10 mins if the restaurant is closed
     if not isWithin:
         helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
