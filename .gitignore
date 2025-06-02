@@ -199,3 +199,4 @@ tests/*
 training/*
 *.jpg
 *.ts
+config.json

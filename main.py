@@ -6,15 +6,19 @@ import requests
 import re
 import random
 import shutil
+import discord
 from paddleocr import TextRecognition
 
-helper.logmessage("loading paddlepaddle")
+helper.logmessage("============ loading ocr engine =============")
+
 ocr = TextRecognition(
     model_name="PP-OCRv5_server_rec",
     model_dir="./paddle_custom"
 )
 
 session = requests.session()
+disc = discord.DiscordYeet()
+first = True
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0',
@@ -32,9 +36,25 @@ headers = {
     'Cache-Control': 'no-cache',
 }
 
+runTime = int(time.time())
+
+# Using a tuple cause lazy - (currentTimer, hasAlerted, lastResetTime)
+# currentTimer is the current number on the board
+# hasAlerted is whether there was an alert recently (redundant?)
+# lastResetTime is when the clock was last reset to 6000 (60:00) or hit 0000 (00:00)
+trackedTimers = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
+
+
 tsFileRegex = re.compile('(.*.ts)')
 m3u8Regex = re.compile('source[\': ]+(.*)\',')
-runTime = int(time.time())
+
+
+angelcamUrl = "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"
+timezone = "US/Central"
+
+# set up end
+
+# functions start
 
 def numbersOnly(text):
     strippedNumber = ""
@@ -42,7 +62,6 @@ def numbersOnly(text):
         if text[i].isdigit():
             strippedNumber = strippedNumber + text[i]
     return strippedNumber
-
 
 
 def getM3u8(url):
@@ -165,10 +184,10 @@ def getFrames(file, randomFrame=False):
     clocks = [("clock1", "crop=240:90:650:0"), ("clock2", "crop=240:90:890:10"), ("clock3", "crop=240:90:1130:20"), ("clock4", "crop=240:100:1580:35"), ("clock5", "crop=240:100:1830:40"), ("clock6", "crop=240:100:2070:65")]
     timerTimes = []
     frame = 2
-    if random:
-        frame = 169#random.randint(1, 6000)
+
+    if randomFrame:
+        frame = random.randint(1, 75)
     for clock in clocks:
-        #filename = f"live/{clock[0]}/{runTime}-%04d-{clock[0]}.jpg"
         filename = f"live/{runTime}-{clock[0]}.jpg"
         command = [
             "ffmpeg",
@@ -195,71 +214,77 @@ def getFrames(file, randomFrame=False):
 
     return timerTimes
 
+# functions end
 
-angelcamUrl = "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"
+while True:
+    isWithin = helper.withinTimePeriod("08:00", "22:30", timezone)
+    sleeptime = 60
+    
+    # sleep for 5-10 mins if the restaurant is closed
+    if not isWithin:
+        helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
+        sleeptime = random.randint(300, 600)
 
-lem3u8 = getM3u8(angelcamUrl)
-downloadedVideoFile = downloadVideo(lem3u8)
+    # restaurant open, let's go
+    else:
+        lem3u8 = getM3u8(angelcamUrl)
+        downloadedVideoFile = downloadVideo(lem3u8)
+        liveTimers = getFrames(downloadedVideoFile, randomFrame=False)
 
-# Using a tuple cause lazy - (currentTimer, hasAlerted, lastResetTime)
-# currentTimer is the current number on the board
-# hasAlerted is whether there was an alert recently (redundant?)
-# lastResetTime is when the clock was last reset to 6000 (60:00) or hit 0000 (00:00)
-trackedTimers = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
+        helper.logmessage("============== checking timers ==============")
+        for counter in range(len(liveTimers)):
+            # compare the timers and their many different states
+            try:
+                currentTime = int(liveTimers[counter])
+                trackedTime = trackedTimers[counter][0]
+                lastResetTime = trackedTimers[counter][2]
 
+                # case 1: trackedTime = 6000 and currentTime < trackedTime and currenTime != 0
+                # alert if hasAlerted is False, otherwise just ignore
+                if currentTime < trackedTime and trackedTime == 6000 and currentTime != 0:
+                    helper.logmessage(f"timer {counter} triggered, steak challenge is on")
+                    if not trackedTimers[counter][1]:
+                        disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                    trackedTimers[counter] = (currentTime, True, lastResetTime)
 
-downloadedVideoFile = "250601-record-partone.ts"
-liveTimers = getFrames(downloadedVideoFile, randomFrame=True)
+                # case 2: trackedTime < 6000 and currentTime < trackedTime
+                # update the timer but don't send any alerts
+                elif currentTime < trackedTime:
+                    trackedTimers[counter] = (currentTime, trackedTimers[counter][1], lastResetTime)
 
+                # case 3: currentTime hits zero or 6000
+                # set the timer to 6000, reset the alert flag, and also update lastResetTime
+                elif currentTime == 0 or currentTime == 6000:
+                    trackedTimers[counter] = (6000, False, helper.getCurrTimeInInt())
 
-helper.logmessage("============== checking timers ==============")
-for counter in range(len(liveTimers)):
-    # compare the timers and their many different states
-    try:
-        currentTime = int(liveTimers[counter])
-        trackedTime = trackedTimers[counter][0]
-        lastResetTime = trackedTimers[counter][2]
+                # case 4: currentTime > trackedTime but the clock was never reset
+                # this is an odd scenario where the same timer is reused due to many
+                # challengers. Because this script polls every 60 - 90s, it may miss
+                # the overlap between resetting and starting the timer again
+                # should only alert again IF the last reset was over 20 minutes ago
+                elif currentTime > trackedTime:
+                    if int(time.time()) > (lastResetTime + 1200):
+                        trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
+                        disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                    else:
+                        trackedTimers[counter] = (currentTime, False, lastResetTime)
 
-        # case 1: trackedTime = 6000 and currentTime < trackedTime
-        # alert if hasAlerted is False, otherwise just ignore
-        if currentTime < trackedTime and trackedTime == 6000:
-            helper.logmessage(f"timer {counter} triggered, steak challenge is on")
-            if trackedTimers[counter][1]:
-                helper.logmessage("here is an alert to discord")
-            trackedTimers[counter] = (currentTime, True, lastResetTime)
+                # case 5: currentTime = trackedTime
+                # the clock is... frozen?
+                elif currentTime == trackedTime:
+                    continue
 
-        # case 2: trackedTime < 6000 and currentTime < trackedTime
-        # update the timer but don't send any alerts
-        elif currentTime < trackedTime:
-            trackedTimers[counter] = (currentTime, trackedTimers[counter][1], lastResetTime)
-
-        # case 3: currentTime hits zero or 6000
-        # set the timer to zero, reset the alert flag, and also update lastResetTime
-        elif currentTime == 0 or currentTime == 6000:
-            trackedTimers[counter] = (currentTime, False, helper.getCurrTimeInInt())
-        
-        # case 4: currentTime > trackedTime but the clock was never reset
-        # this is an odd scenario where the same timer is reused due to many
-        # challengers. Because this script polls every minute, it may miss the 
-        # overlap between resetting and starting the timer again
-        # 
-        # should only alert again IF the last reset was over 20 minutes ago
-        elif currentTime > trackedTime:
-            if int(time.time()) > (lastResetTime + 1200):
-                helper.logmessage("here is an alert to discord")
-                trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
-            else:
-                trackedTimers[counter] = (currentTime, False, lastResetTime)
-
-        # case 5: how does this every happen? log something and just capture it
-        else:
-            helper.logmessage("how did we get here?")
-            helper.logmessage(f"current time for timer {counter}: {currentTime}")
-            helper.logmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
+                # case 6: how does this every happen? log something and just capture it
+                else:
+                    helper.logmessage("how did we get here?")
+                    helper.logmessage(f"current time for timer {counter}: {currentTime}")
+                    helper.logmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
 
 
-    except ValueError as e:
-        helper.logmessage(f"couldn't parse timer {counter}, ignoring for now")
+            except ValueError as e:
+                helper.logmessage(f"couldn't parse timer {counter}, ignoring for now")
 
-sleeptime = 60
-helper.logmessage(f"========== sleeping for {sleeptime} seconds ==========")
+            sleeptime = random.randint(60, 90)
+    first = False
+    helper.logmessage(f"========== sleeping for {sleeptime} seconds ==========")
+    time.sleep(sleeptime)

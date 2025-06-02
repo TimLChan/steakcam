@@ -24,8 +24,8 @@ bored
 
 - [x] logic to parse and find the m3u8
 - [x] logic to download the video segment
-- [ ] logic to split out the individual clocks
-- [ ] finetuning ocr model
-- [ ] logic to ocr the image
-- [ ] track changes to the clocks
+- [x] logic to split out the individual clocks
+- [x] finetuning ocr model
+- [x] logic to ocr the image
+- [x] track changes to the clocks
 - [ ] send an alert on discord
