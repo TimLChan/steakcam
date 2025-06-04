@@ -186,7 +186,7 @@ def getFrames(file, randomFrame=False):
     frame = 2
 
     if randomFrame:
-        frame = random.randint(1, 75)
+        frame = random.randint(1, 60)
     for clock in clocks:
         filename = f"live/{runTime}-{clock[0]}.jpg"
         command = [
@@ -197,14 +197,15 @@ def getFrames(file, randomFrame=False):
             #'-vf', f'fps=1/4,{clock[1]}',
             filename
         ]
-        commandExec = subprocess.run(command, capture_output=False, stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+        commandExec = subprocess.run(command, capture_output=False, stdout = subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         if commandExec.returncode != 0:
             helper.logmessage("something went wrong when cutting frames")
-            return False
-
-        timerResult = checkClock(filename)
-        timerTimes.append(timerResult)
-        helper.logmessage(f"{clock[0]} result: {timerResult}")
+            helper.logmessage(commandExec.stderr)
+        else:
+            timerResult = checkClock(filename)
+            if timerResult != "":
+                timerTimes.append(timerResult)
+            helper.logmessage(f"{clock[0]} result: {timerResult}")
 
         try:
             os.remove(filename)
@@ -232,59 +233,62 @@ while True:
         liveTimers = getFrames(downloadedVideoFile, randomFrame=False)
 
         helper.logmessage("============== checking timers ==============")
-        for counter in range(len(liveTimers)):
+        if len(liveTimers) == 6:
+            for counter in range(len(liveTimers)):
             # compare the timers and their many different states
-            try:
-                currentTime = int(liveTimers[counter])
-                trackedTime = trackedTimers[counter][0]
-                lastResetTime = trackedTimers[counter][2]
+                try:
+                    currentTime = int(liveTimers[counter])
+                    trackedTime = trackedTimers[counter][0]
+                    lastResetTime = trackedTimers[counter][2]
 
-                # case 1: trackedTime = 6000 and currentTime < trackedTime and currenTime != 0
-                # alert if hasAlerted is False, otherwise just ignore
-                if currentTime < trackedTime and trackedTime == 6000 and currentTime != 0:
-                    helper.logmessage(f"timer {counter} triggered, steak challenge is on")
-                    if not trackedTimers[counter][1]:
-                        disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
-                    trackedTimers[counter] = (currentTime, True, lastResetTime)
+                    # case 1: trackedTime = 6000 and currentTime < trackedTime and currenTime != 0
+                    # alert if hasAlerted is False, otherwise just ignore
+                    if currentTime < trackedTime and trackedTime == 6000 and currentTime != 0:
+                        helper.logmessage(f"timer {counter} triggered, steak challenge is on")
+                        if not trackedTimers[counter][1]:
+                            disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                        trackedTimers[counter] = (currentTime, True, lastResetTime)
 
-                # case 2: trackedTime < 6000 and currentTime < trackedTime
-                # update the timer but don't send any alerts
-                elif currentTime < trackedTime:
-                    trackedTimers[counter] = (currentTime, trackedTimers[counter][1], lastResetTime)
+                    # case 2: trackedTime < 6000 and currentTime < trackedTime
+                    # update the timer but don't send any alerts
+                    elif currentTime < trackedTime:
+                        trackedTimers[counter] = (currentTime, trackedTimers[counter][1], lastResetTime)
 
-                # case 3: currentTime hits zero or 6000
-                # set the timer to 6000, reset the alert flag, and also update lastResetTime
-                elif currentTime == 0 or currentTime == 6000:
-                    trackedTimers[counter] = (6000, False, helper.getCurrTimeInInt())
+                    # case 3: currentTime hits zero or 6000
+                    # set the timer to 6000, reset the alert flag, and also update lastResetTime
+                    elif currentTime == 0 or currentTime == 6000:
+                        trackedTimers[counter] = (6000, False, helper.getCurrTimeInInt())
 
-                # case 4: currentTime > trackedTime but the clock was never reset
-                # this is an odd scenario where the same timer is reused due to many
-                # challengers. Because this script polls every 60 - 90s, it may miss
-                # the overlap between resetting and starting the timer again
-                # should only alert again IF the last reset was over 20 minutes ago
-                elif currentTime > trackedTime:
-                    if int(time.time()) > (lastResetTime + 1200):
-                        trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
-                        disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                    # case 4: currentTime > trackedTime but the clock was never reset
+                    # this is an odd scenario where the same timer is reused due to many
+                    # challengers. Because this script polls every 60 - 90s, it may miss
+                    # the overlap between resetting and starting the timer again
+                    # should only alert again IF the last reset was over 20 minutes ago
+                    elif currentTime > trackedTime:
+                        if int(time.time()) > (lastResetTime + 1200):
+                            trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
+                            disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                        else:
+                            trackedTimers[counter] = (currentTime, False, lastResetTime)
+
+                    # case 5: currentTime = trackedTime
+                    # the clock is... frozen?
+                    elif currentTime == trackedTime:
+                        continue
+
+                    # case 6: how does this every happen? log something and just capture it
                     else:
-                        trackedTimers[counter] = (currentTime, False, lastResetTime)
-
-                # case 5: currentTime = trackedTime
-                # the clock is... frozen?
-                elif currentTime == trackedTime:
-                    continue
-
-                # case 6: how does this every happen? log something and just capture it
-                else:
-                    helper.logmessage("how did we get here?")
-                    helper.logmessage(f"current time for timer {counter}: {currentTime}")
-                    helper.logmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
+                        helper.logmessage("how did we get here?")
+                        helper.logmessage(f"current time for timer {counter}: {currentTime}")
+                        helper.logmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
 
 
-            except ValueError as e:
-                helper.logmessage(f"couldn't parse timer {counter}, ignoring for now")
+                except ValueError as e:
+                    helper.logmessage(f"couldn't parse timer {counter}, ignoring for now")
 
-            sleeptime = random.randint(60, 90)
+        else:
+            helper.logmessage(f"expecting 6 times, got {len(liveTimers)}")
+        sleeptime = random.randint(60, 90)
     first = False
     helper.logmessage(f"========== sleeping for {sleeptime} seconds ==========")
     time.sleep(sleeptime)
