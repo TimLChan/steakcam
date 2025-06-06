@@ -2,6 +2,7 @@ import os
 import subprocess
 import helper
 import time
+import json
 import requests
 import re
 import random
@@ -11,10 +12,10 @@ from paddleocr import TextRecognition
 
 helper.logmessage("============ loading ocr engine =============")
 
-ocr = TextRecognition(
-    model_name="PP-OCRv5_server_rec",
-    model_dir="./paddle_custom"
-)
+with open("config.json", "r") as f:
+    ocrConfig = json.load(f)
+
+ocr = TextRecognition(**ocrConfig["ocrEngine"]["args"])
 
 session = requests.session()
 disc = discord.DiscordYeet()
@@ -65,54 +66,73 @@ def numbersOnly(text):
 
 
 def getM3u8(url):
+    isErr = False
+    m3u8Urls = []
     helper.logmessage("=============== getting m3u8 ================")
-    videoFeed = requests.get(url, headers=headers)
-    if videoFeed.status_code != 200:
-        helper.logmessage(f"error fetching playlist, http {videoFeed.status_code} received")
-        return False
-    m3u8Urls = m3u8Regex.findall(videoFeed.text)
-    if len(m3u8Urls) == 0:
-        helper.logmessage(f"could not find playlist on page")
-        return False
-    return m3u8Urls[0]
+    try:
+        videoFeed = requests.get(url, headers=headers)
+        if videoFeed.status_code != 200:
+            helper.logmessage(f"error fetching playlist, http {videoFeed.status_code} received")
+            m3u8Urls.append("is_borked")
+            isErr = True
+        m3u8Urls = m3u8Regex.findall(videoFeed.text)
+        if len(m3u8Urls) == 0:
+            helper.logmessage(f"could not find playlist on page")
+            m3u8Urls.append("is_borked")
+            isErr = True
+    except Exception as e:
+        helper.logmessage(f"error fetching playlist")
+        helper.logmessage(e)
+        m3u8Urls.append("is_borked")
+        isErr = True
+    return m3u8Urls[0], isErr
 
 
 def downloadVideo(m3u8url):
+    isErr = False
     helper.logmessage("============= downloading video =============")
-    m3u8Payload = requests.get(m3u8url, headers=headers)
-    if m3u8Payload.status_code != 200:
-        helper.logmessage(f"error fetching video, http {m3u8Payload.status_code} received")
-        return False
-    tsFiles = tsFileRegex.findall(m3u8Payload.text)
+    try:
+        m3u8Payload = requests.get(m3u8url, headers=headers)
+        if m3u8Payload.status_code != 200:
+            helper.logmessage(f"error fetching video, http {m3u8Payload.status_code} received")
+            isErr = True
+        tsFiles = tsFileRegex.findall(m3u8Payload.text)
 
-    if len(tsFiles) == 0:
-        helper.logmessage(f"could not find files in playlist")
-        return False
+        if len(tsFiles) == 0:
+            helper.logmessage(f"could not find files in playlist")
+            isErr = True
 
-    tsFileUrl = m3u8url.split("playlist.m3u8")[0] + tsFiles[-1]
-    videoFile = session.get(tsFileUrl, headers=headers)
+        tsFileUrl = m3u8url.split("playlist.m3u8")[0] + tsFiles[-1]
+        videoFile = session.get(tsFileUrl, headers=headers)
 
-    with open("video.ts", "wb") as f:
-        f.write(videoFile.content)
-
-    return "video.ts"
+        with open("video.ts", "wb") as f:
+            f.write(videoFile.content)
+    except Exception as e:
+        helper.logmessage(f"error downloading video")
+        helper.logmessage(e)
+        isErr = True
+    return "video.ts", isErr
 
 def checkClock(filename):
     #helper.logmessage(f"ocring {filename}")
-    result = ocr.predict(filename)
     clock = ""
+    try:
+        result = ocr.predict(filename)
 
-    for res in result:
-        tempClock = res['rec_text']
-        tempClock = numbersOnly(tempClock)
-        if len(tempClock) != 4:
-            helper.logmessage(f"issue during ocr - ocr: {res['rec_text']}, cleaned: {tempClock}")
-            errorFileName = f"errors/{filename.split('/')[-1]}"
-            shutil.copy(filename, errorFileName)
-            with open(errorFileName.replace("jpg", "txt"), "w") as f:
-                f.write(f"ocr: {res['rec_text']}, cleaned: {tempClock}")
-        else:
-            clock = tempClock
+        for res in result:
+            tempClock = res['rec_text']
+            tempClock = numbersOnly(tempClock)
+            if len(tempClock) != 4:
+                helper.logmessage(f"issue during ocr - ocr: {res['rec_text']}, cleaned: {tempClock}")
+                errorFileName = f"errors/{filename.split('/')[-1]}"
+                shutil.copy(filename, errorFileName)
+                with open(errorFileName.replace("jpg", "txt"), "w") as f:
+                    f.write(f"ocr: {res['rec_text']}, cleaned: {tempClock}")
+            else:
+                clock = tempClock
+    except Exception as e:
+        helper.logmessage("something went wrong when checking timer")
+        helper.logmessage(str(e))
 
     return clock
 
@@ -228,66 +248,68 @@ while True:
 
     # restaurant open, let's go
     else:
-        lem3u8 = getM3u8(angelcamUrl)
-        downloadedVideoFile = downloadVideo(lem3u8)
-        liveTimers = getFrames(downloadedVideoFile, randomFrame=False)
+        lem3u8, hasErr = getM3u8(angelcamUrl)
+        if hasErr == False:
+            downloadedVideoFile, hasErr = downloadVideo(lem3u8)
+            if hasErr == False:
+                liveTimers = getFrames(downloadedVideoFile, randomFrame=False)
 
-        helper.logmessage("============== checking timers ==============")
-        if len(liveTimers) == 6:
-            for counter in range(len(liveTimers)):
-            # compare the timers and their many different states
-                try:
-                    currentTime = int(liveTimers[counter])
-                    trackedTime = trackedTimers[counter][0]
-                    lastResetTime = trackedTimers[counter][2]
+                helper.logmessage("============== checking timers ==============")
+                if len(liveTimers) == 6:
+                    for counter in range(len(liveTimers)):
+                    # compare the timers and their many different states
+                        try:
+                            currentTime = int(liveTimers[counter])
+                            trackedTime = trackedTimers[counter][0]
+                            lastResetTime = trackedTimers[counter][2]
 
-                    # case 1: trackedTime = 6000 and currentTime < trackedTime and currenTime != 0
-                    # alert if hasAlerted is False, otherwise just ignore
-                    if currentTime < trackedTime and trackedTime == 6000 and currentTime != 0:
-                        helper.logmessage(f"timer {counter} triggered, steak challenge is on")
-                        if not trackedTimers[counter][1]:
-                            disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
-                        trackedTimers[counter] = (currentTime, True, lastResetTime)
+                            # case 1: trackedTime = 6000 and currentTime < trackedTime and currenTime != 0
+                            # alert if hasAlerted is False, otherwise just ignore
+                            if currentTime < trackedTime and trackedTime == 6000 and currentTime != 0:
+                                helper.logmessage(f"timer {counter} triggered, steak challenge is on")
+                                if not trackedTimers[counter][1]:
+                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                                trackedTimers[counter] = (currentTime, True, lastResetTime)
 
-                    # case 2: trackedTime < 6000 and currentTime < trackedTime
-                    # update the timer but don't send any alerts
-                    elif currentTime < trackedTime:
-                        trackedTimers[counter] = (currentTime, trackedTimers[counter][1], lastResetTime)
+                            # case 2: trackedTime < 6000 and currentTime < trackedTime
+                            # update the timer but don't send any alerts
+                            elif currentTime < trackedTime:
+                                trackedTimers[counter] = (currentTime, trackedTimers[counter][1], lastResetTime)
 
-                    # case 3: currentTime hits zero or 6000
-                    # set the timer to 6000, reset the alert flag, and also update lastResetTime
-                    elif currentTime == 0 or currentTime == 6000:
-                        trackedTimers[counter] = (6000, False, helper.getCurrTimeInInt())
+                            # case 3: currentTime hits zero or 6000
+                            # set the timer to 6000, reset the alert flag, and also update lastResetTime
+                            elif currentTime == 0 or currentTime == 6000:
+                                trackedTimers[counter] = (6000, False, helper.getCurrTimeInInt())
 
-                    # case 4: currentTime > trackedTime but the clock was never reset
-                    # this is an odd scenario where the same timer is reused due to many
-                    # challengers. Because this script polls every 60 - 90s, it may miss
-                    # the overlap between resetting and starting the timer again
-                    # should only alert again IF the last reset was over 20 minutes ago
-                    elif currentTime > trackedTime:
-                        if int(time.time()) > (lastResetTime + 1200):
-                            trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
-                            disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
-                        else:
-                            trackedTimers[counter] = (currentTime, False, lastResetTime)
+                            # case 4: currentTime > trackedTime but the clock was never reset
+                            # this is an odd scenario where the same timer is reused due to many
+                            # challengers. Because this script polls every 60 - 90s, it may miss
+                            # the overlap between resetting and starting the timer again
+                            # should only alert again IF the last reset was over 20 minutes ago
+                            elif currentTime > trackedTime:
+                                if int(time.time()) > (lastResetTime + 1200):
+                                    trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
+                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                                else:
+                                    trackedTimers[counter] = (currentTime, False, lastResetTime)
 
-                    # case 5: currentTime = trackedTime
-                    # the clock is... frozen?
-                    elif currentTime == trackedTime:
-                        continue
+                            # case 5: currentTime = trackedTime
+                            # the clock is... frozen?
+                            elif currentTime == trackedTime:
+                                continue
 
-                    # case 6: how does this every happen? log something and just capture it
-                    else:
-                        helper.logmessage("how did we get here?")
-                        helper.logmessage(f"current time for timer {counter}: {currentTime}")
-                        helper.logmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
+                            # case 6: how does this every happen? log something and just capture it
+                            else:
+                                helper.logmessage("how did we get here?")
+                                helper.logmessage(f"current time for timer {counter}: {currentTime}")
+                                helper.logmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
 
 
-                except ValueError as e:
-                    helper.logmessage(f"couldn't parse timer {counter}, ignoring for now")
+                        except ValueError as e:
+                            helper.logmessage(f"couldn't parse timer {counter}, ignoring for now")
 
-        else:
-            helper.logmessage(f"expecting 6 times, got {len(liveTimers)}")
+                else:
+                    helper.logmessage(f"expecting 6 times, got {len(liveTimers)}")
         sleeptime = random.randint(60, 90)
     first = False
     helper.logmessage(f"========== sleeping for {sleeptime} seconds ==========")

@@ -6,6 +6,12 @@
             "name": "",
             "url": ""
         }
-
+    },
+    "ocrEngine": {
+        "args": {
+            "model_name": "PP-OCRv5_server_rec",
+            "model_dir": "./paddle_custom",
+            "cpu_threads": 1
+        }
     }
 }
