@@ -72,17 +72,17 @@ def getM3u8(url):
     try:
         videoFeed = requests.get(url, headers=headers)
         if videoFeed.status_code != 200:
-            helper.logmessage(f"error fetching playlist, http {videoFeed.status_code} received")
+            helper.writelogmessage(f"error fetching playlist, http {videoFeed.status_code} received")
             m3u8Urls.append("is_borked")
             isErr = True
         m3u8Urls = m3u8Regex.findall(videoFeed.text)
         if len(m3u8Urls) == 0:
-            helper.logmessage(f"could not find playlist on page")
+            helper.writelogmessage(f"could not find playlist on page")
             m3u8Urls.append("is_borked")
             isErr = True
     except Exception as e:
-        helper.logmessage(f"error fetching playlist")
-        helper.logmessage(e)
+        helper.writelogmessage(f"error fetching playlist")
+        helper.writelogmessage(e)
         m3u8Urls.append("is_borked")
         isErr = True
     return m3u8Urls[0], isErr
@@ -99,7 +99,7 @@ def downloadVideo(m3u8url):
         tsFiles = tsFileRegex.findall(m3u8Payload.text)
 
         if len(tsFiles) == 0:
-            helper.logmessage(f"could not find files in playlist")
+            helper.writelogmessage(f"could not find files in playlist")
             isErr = True
 
         tsFileUrl = m3u8url.split("playlist.m3u8")[0] + tsFiles[-1]
@@ -108,20 +108,23 @@ def downloadVideo(m3u8url):
         with open("video.ts", "wb") as f:
             f.write(videoFile.content)
     except Exception as e:
-        helper.logmessage(f"error downloading video")
-        helper.logmessage(e)
+        helper.writelogmessage(f"error downloading video")
+        helper.writelogmessage(e)
         isErr = True
     return "video.ts", isErr
 
 def checkClock(filename):
     #helper.logmessage(f"ocring {filename}")
     clock = ""
+    confidence = ""
     try:
         result = ocr.predict(filename)
 
         for res in result:
             tempClock = res['rec_text']
             tempClock = numbersOnly(tempClock)
+            if "rec_store" in res:
+                confidence = res['rec_score']
             if len(tempClock) != 4:
                 helper.logmessage(f"issue during ocr - ocr: {res['rec_text']}, cleaned: {tempClock}")
                 errorFileName = f"errors/{filename.split('/')[-1]}"
@@ -134,7 +137,7 @@ def checkClock(filename):
         helper.logmessage("something went wrong when checking timer")
         helper.logmessage(str(e))
 
-    return clock
+    return clock, confidence
 
 def getFrames(file, randomFrame=False):
     helper.logmessage("============ parse frames and ocr ===========")
@@ -219,18 +222,18 @@ def getFrames(file, randomFrame=False):
         ]
         commandExec = subprocess.run(command, capture_output=False, stdout = subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         if commandExec.returncode != 0:
-            helper.logmessage("something went wrong when cutting frames")
-            helper.logmessage(commandExec.stderr)
+            helper.writelogmessage("something went wrong when cutting frames")
+            helper.writelogmessage(commandExec.stderr)
         else:
-            timerResult = checkClock(filename)
+            timerResult, timerConfidence = checkClock(filename)
             if timerResult != "":
                 timerTimes.append(timerResult)
-            helper.logmessage(f"{clock[0]} result: {timerResult}")
+            helper.logmessage(f"{clock[0]} result: {timerResult} | confidence: {timerConfidence}")
 
         try:
             os.remove(filename)
         except Exception as e:
-            helper.logmessage(f"could not delete {filename}, error below:")
+            helper.writelogmessage(f"could not delete {filename}, error below:")
             helper.logmessage(e)
 
     return timerTimes
@@ -300,16 +303,16 @@ while True:
 
                             # case 6: how does this every happen? log something and just capture it
                             else:
-                                helper.logmessage("how did we get here?")
-                                helper.logmessage(f"current time for timer {counter}: {currentTime}")
-                                helper.logmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
+                                helper.writelogmessage("how did we get here?")
+                                helper.writelogmessage(f"current time for timer {counter}: {currentTime}")
+                                helper.writelogmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
 
 
                         except ValueError as e:
-                            helper.logmessage(f"couldn't parse timer {counter}, ignoring for now")
+                            helper.writelogmessage(f"couldn't parse timer {counter}, ignoring for now")
 
                 else:
-                    helper.logmessage(f"expecting 6 times, got {len(liveTimers)}")
+                    helper.writelogmessage(f"expecting 6 times, got {len(liveTimers)}")
         sleeptime = random.randint(60, 90)
     first = False
     helper.logmessage(f"========== sleeping for {sleeptime} seconds ==========")

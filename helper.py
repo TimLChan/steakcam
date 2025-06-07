@@ -5,7 +5,7 @@ import time
 def logmessage(msg=""):
     print(('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
 
-def writelogmessage(msg="", file="debug.log"):
+def writelogmessage(msg="", file="error.log"):
     message = ('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg)
     with open(file, 'a') as f:
         f.write(f"{message}\n")
