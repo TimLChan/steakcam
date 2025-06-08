@@ -123,7 +123,7 @@ def checkClock(filename):
         for res in result:
             tempClock = res['rec_text']
             tempClock = numbersOnly(tempClock)
-            if "rec_store" in res:
+            if "rec_score" in res:
                 confidence = res['rec_score']
             if len(tempClock) != 4:
                 helper.logmessage(f"issue during ocr - ocr: {res['rec_text']}, cleaned: {tempClock}")
