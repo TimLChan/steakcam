@@ -10,6 +10,10 @@ import shutil
 import discord
 from paddleocr import TextRecognition
 
+helper.createfolder('errors')
+helper.createfolder('live')
+helper.createfolder('train')
+
 helper.logmessage("============ loading ocr engine =============")
 
 with open("config.json", "r") as f:
@@ -125,12 +129,20 @@ def checkClock(filename):
             tempClock = numbersOnly(tempClock)
             if "rec_score" in res:
                 confidence = res['rec_score']
+                try:
+                    if confidence < 0.8 and confidence > 0.0:
+                        trainingFileName = f"train/{filename.split('/')[-1]}"
+                        shutil.copy(filename, trainingFileName)
+                        with open(trainingFileName.replace("jpg", "txt"), "w") as f:
+                            f.write(f"{trainingFileName},{res['rec_text']},{confidence}\n")
+                except:
+                    helper.writelogmessage(f"couldn't save file {filename} to training folder")
             if len(tempClock) != 4:
                 helper.logmessage(f"issue during ocr - ocr: {res['rec_text']}, cleaned: {tempClock}")
                 errorFileName = f"errors/{filename.split('/')[-1]}"
                 shutil.copy(filename, errorFileName)
                 with open(errorFileName.replace("jpg", "txt"), "w") as f:
-                    f.write(f"ocr: {res['rec_text']}, cleaned: {tempClock}")
+                    f.write(f"ocr: {res['rec_text']}, cleaned: {tempClock}, confidence: {confidence}\n")
             else:
                 clock = tempClock
     except Exception as e:

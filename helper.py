@@ -1,26 +1,25 @@
 from datetime import datetime
 import pytz
 import time
+import os
+
+
+def loginput(msg=""):
+    return input(('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
 
 def logmessage(msg=""):
     print(('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
 
-def writelogmessage(msg="", file="error.log"):
-    message = ('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg)
-    with open(file, 'a') as f:
-        f.write(f"{message}\n")
-
-def loginput(msg=""):
-    return input(('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
-    
-def getlogtime():
-    return datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p')
-
-def getTime():
-    return str(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%I:%M:%S %p %Z - %b %d'))
+def createfolder(foldername):
+    if not os.path.exists(foldername):
+        os.mkdir(foldername)
+        logmessage("Creating Directory: '" + foldername + "'")
 
 def getDateTime():
     return str(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%b %d - %I:%M:%S %p %Z'))
+
+def getlogtime():
+    return datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p')
 
 def getTime(timezone="Australia/Melbourne"):
     return datetime.now(pytz.timezone(timezone)).strftime("%H:%M:%S")
@@ -54,3 +53,8 @@ def withinTimePeriod(start="15:58:59", end="16:01:30", timezone="Australia/Melbo
     # the time period is on the next day
     else:
         return start <= currenttime or currenttime <= end
+
+def writelogmessage(msg="", file="error.log"):
+    message = ('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg)
+    with open(file, 'a') as f:
+        f.write(f"{message}\n")
