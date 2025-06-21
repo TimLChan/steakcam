@@ -47,7 +47,13 @@ runTime = int(time.time())
 # currentTimer is the current number on the board
 # hasAlerted is whether there was an alert recently (redundant?)
 # lastResetTime is when the clock was last reset to 6000 (60:00) or hit 0000 (00:00)
-trackedTimers = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
+if "timers" not in ocrConfig:
+    trackedTimers = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
+else:
+    if len(ocrConfig["timers"]) != 6:
+        trackedTimers = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
+    else:
+        trackedTimers = ocrConfig["timers"]
 
 
 tsFileRegex = re.compile('(.*.ts)')
@@ -60,6 +66,10 @@ timezone = "US/Central"
 # set up end
 
 # functions start
+
+def saveConfig(data):
+    with open("config.json", "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 def numbersOnly(text):
     strippedNumber = ""
@@ -74,7 +84,7 @@ def getM3u8(url):
     m3u8Urls = []
     helper.logmessage("=============== getting m3u8 ================")
     try:
-        videoFeed = requests.get(url, headers=headers)
+        videoFeed = requests.get(url, headers=headers, timeout=10)
         if videoFeed.status_code != 200:
             helper.writelogmessage(f"error fetching playlist, http {videoFeed.status_code} received")
             m3u8Urls.append("is_borked")
@@ -96,7 +106,7 @@ def downloadVideo(m3u8url):
     isErr = False
     helper.logmessage("============= downloading video =============")
     try:
-        m3u8Payload = requests.get(m3u8url, headers=headers)
+        m3u8Payload = requests.get(m3u8url, headers=headers, timeout=10)
         if m3u8Payload.status_code != 200:
             helper.logmessage(f"error fetching video, http {m3u8Payload.status_code} received")
             isErr = True
@@ -319,9 +329,12 @@ while True:
                                 helper.writelogmessage(f"current time for timer {counter}: {currentTime}")
                                 helper.writelogmessage(f"tracked payload timer {counter}: {trackedTimers[counter]}")
 
-
                         except ValueError as e:
                             helper.writelogmessage(f"couldn't parse timer {counter}, ignoring for now")
+
+                    # update the config file on changes
+                    ocrConfig["timers"] = trackedTimers
+                    saveConfig(ocrConfig)
 
                 else:
                     helper.writelogmessage(f"expecting 6 times, got {len(liveTimers)}")
