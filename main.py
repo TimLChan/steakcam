@@ -263,7 +263,10 @@ def getFrames(file, randomFrame=False):
 # functions end
 
 while True:
-    isWithin = helper.withinTimePeriod("08:00", "22:30", timezone)
+    # note - the times for The Big Texan are normally 08:00 to 22:30
+    #        however, steak challenges have sometimes started after
+    #        closing, so adding in 30mins of padding
+    isWithin = helper.withinTimePeriod("08:00", "23:00", timezone)
     sleeptime = 60
 
     # sleep for 5-10 mins if the restaurant is closed
