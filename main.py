@@ -67,9 +67,11 @@ timezone = "US/Central"
 
 # functions start
 
+
 def saveConfig(data):
     with open("config.json", "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
+
 
 def numbersOnly(text):
     strippedNumber = ""
@@ -84,7 +86,7 @@ def getM3u8(url):
     m3u8Urls = []
     helper.logmessage("=============== getting m3u8 ================")
     try:
-        videoFeed = requests.get(url, headers=headers, timeout=10)
+        videoFeed = session.get(url, headers=headers, timeout=10)
         if videoFeed.status_code != 200:
             helper.writelogmessage(f"error fetching playlist, http {videoFeed.status_code} received")
             m3u8Urls.append("is_borked")
@@ -106,7 +108,7 @@ def downloadVideo(m3u8url):
     isErr = False
     helper.logmessage("============= downloading video =============")
     try:
-        m3u8Payload = requests.get(m3u8url, headers=headers, timeout=10)
+        m3u8Payload = session.get(m3u8url, headers=headers, timeout=10)
         if m3u8Payload.status_code != 200:
             helper.logmessage(f"error fetching video, http {m3u8Payload.status_code} received")
             isErr = True
@@ -117,7 +119,7 @@ def downloadVideo(m3u8url):
             isErr = True
 
         tsFileUrl = m3u8url.split("playlist.m3u8")[0] + tsFiles[-1]
-        videoFile = session.get(tsFileUrl, headers=headers)
+        videoFile = session.get(tsFileUrl, headers=headers, timeout=10)
 
         with open("video.ts", "wb") as f:
             f.write(videoFile.content)
@@ -127,8 +129,9 @@ def downloadVideo(m3u8url):
         isErr = True
     return "video.ts", isErr
 
+
 def checkClock(filename):
-    #helper.logmessage(f"ocring {filename}")
+    # helper.logmessage(f"ocring {filename}")
     clock = ""
     confidence = ""
     try:
@@ -160,6 +163,7 @@ def checkClock(filename):
         helper.logmessage(str(e))
 
     return clock, confidence
+
 
 def getFrames(file, randomFrame=False):
     helper.logmessage("============ parse frames and ocr ===========")
@@ -239,10 +243,10 @@ def getFrames(file, randomFrame=False):
             "-i", file,
             '-vf', f'select=eq(n\,{frame}),{clock[1]}',
             '-vframes', '1',
-            #'-vf', f'fps=1/4,{clock[1]}',
+            # '-vf', f'fps=1/4,{clock[1]}',
             filename
         ]
-        commandExec = subprocess.run(command, capture_output=False, stdout = subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        commandExec = subprocess.run(command, capture_output=False, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         if commandExec.returncode != 0:
             helper.writelogmessage("something went wrong when cutting frames")
             helper.writelogmessage(commandExec.stderr)
@@ -261,6 +265,7 @@ def getFrames(file, randomFrame=False):
     return timerTimes
 
 # functions end
+
 
 while True:
     # note - the times for The Big Texan are normally 08:00 to 22:30
@@ -285,7 +290,7 @@ while True:
                 helper.logmessage("============== checking timers ==============")
                 if len(liveTimers) == 6:
                     for counter in range(len(liveTimers)):
-                    # compare the timers and their many different states
+                        # compare the timers and their many different states
                         try:
                             currentTime = int(liveTimers[counter])
                             trackedTime = trackedTimers[counter][0]
