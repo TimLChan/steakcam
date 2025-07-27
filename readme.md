@@ -29,3 +29,11 @@ bored
 - [x] logic to ocr the image
 - [x] track changes to the clocks
 - [x] send an alert on discord
+
+## i really want to finetune the ocr model further
+
+The model has already been finetuned on a ~1,250 image dataset of the timers at the Big Texan. The images were collected over 3 days with the images taken at different times of the day.
+
+In ~2 months of running this script 24/7, there have only been 47 cases where the model failed to correctly identify the timer. 
+
+To learn how to finetune the model, refer to the blog article [Fine-tuning PaddleOCR models for text recognition](https://timc.me/blog/finetune-paddleocr-textdetection.html) that was put together for this project.
