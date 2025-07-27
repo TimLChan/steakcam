@@ -14,7 +14,7 @@ class DiscordYeet(object):
         with open("config.json", "r") as f:
             return json.loads(f.read())
 
-    def SendMessage(self, first, timer=1, timeRemaining=6000, streamUrl="https://www.bigtexan.com/live-stream/"):
+    def SendMessage(self, first, timer=1, timeRemaining=6000, streamUrl="https://www.bigtexan.com/live-stream/", currentTime="unknown"):
         if first:
             return
         timerRemainingStr = str(timeRemaining)
@@ -38,6 +38,11 @@ class DiscordYeet(object):
                             "name": "time remaining",
                             "value": timerRemainingStr,
                             "inline": "true"
+                        },
+                        {
+                            "name": "time @ the big texan",
+                            "value": currentTime,
+                            "inline": "false"
                         },
                         {
                             "name": "link",

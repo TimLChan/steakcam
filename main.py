@@ -136,7 +136,6 @@ def checkClock(filename):
     confidence = ""
     try:
         result = ocr.predict(filename)
-
         for res in result:
             tempClock = res['rec_text']
             tempClock = numbersOnly(tempClock)
@@ -161,7 +160,6 @@ def checkClock(filename):
     except Exception as e:
         helper.logmessage("something went wrong when checking timer")
         helper.logmessage(str(e))
-
     return clock, confidence
 
 
@@ -300,8 +298,12 @@ while True:
                             # alert if hasAlerted is False, otherwise just ignore
                             if currentTime < trackedTime and trackedTime == 6000 and currentTime != 0:
                                 helper.logmessage(f"timer {counter} triggered, steak challenge is on")
+                                # janky logic when someone stands in front of the timer
+                                if currentTime < 100:
+                                    helper.logmessage(f"ignoring timer {counter} because {currentTime} feels too low")
+                                    continue
                                 if not trackedTimers[counter][1]:
-                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl, helper.getTime(timezone))
                                 trackedTimers[counter] = (currentTime, True, lastResetTime)
 
                             # case 2: trackedTime < 6000 and currentTime < trackedTime
@@ -321,8 +323,12 @@ while True:
                             # should only alert again IF the last reset was over 20 minutes ago
                             elif currentTime > trackedTime:
                                 if int(time.time()) > (lastResetTime + 1200):
+                                    # janky logic when someone stands in front of the timer
+                                    if currentTime < 100:
+                                        helper.logmessage(f"ignoring timer {counter} because {currentTime} feels too low")
+                                        continue
                                     trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
-                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl)
+                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl, helper.getTime(timezone))
                                 else:
                                     trackedTimers[counter] = (currentTime, False, lastResetTime)
 
