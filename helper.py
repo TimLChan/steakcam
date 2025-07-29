@@ -4,22 +4,22 @@ import time
 import os
 
 
-def loginput(msg=""):
-    return input(('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
+def loginput(msg="", timezone="Australia/Melbourne"):
+    return input(('[{}] {}').format(datetime.now(pytz.timezone(timezone)).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
 
-def logmessage(msg=""):
-    print(('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
+def logmessage(msg="", timezone="Australia/Melbourne"):
+    print(('[{}] {}').format(datetime.now(pytz.timezone(timezone)).strftime('%Y-%m-%d %I:%M:%S %p'), msg))
 
 def createfolder(foldername):
     if not os.path.exists(foldername):
         os.mkdir(foldername)
         logmessage("Creating Directory: '" + foldername + "'")
 
-def getDateTime():
-    return str(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%b %d - %I:%M:%S %p %Z'))
+def getDateTime(timezone="Australia/Melbourne"):
+    return str(datetime.now(pytz.timezone(timezone)).strftime('%b %d - %I:%M:%S %p %Z'))
 
-def getlogtime():
-    return datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p')
+def getlogtime(timezone="Australia/Melbourne"):
+    return datetime.now(pytz.timezone(timezone)).strftime('%Y-%m-%d %I:%M:%S %p')
 
 def getTime(timezone="Australia/Melbourne"):
     return datetime.now(pytz.timezone(timezone)).strftime("%H:%M:%S")
@@ -54,7 +54,7 @@ def withinTimePeriod(start="15:58:59", end="16:01:30", timezone="Australia/Melbo
     else:
         return start <= currenttime or currenttime <= end
 
-def writelogmessage(msg="", file="error.log"):
-    message = ('[{}] {}').format(datetime.now(pytz.timezone('Australia/Melbourne')).strftime('%Y-%m-%d %I:%M:%S %p'), msg)
+def writelogmessage(msg="", file="error.log", timezone="Australia/Melbourne"):
+    message = ('[{}] {}').format(datetime.now(pytz.timezone(timezone)).strftime('%Y-%m-%d %I:%M:%S %p'), msg)
     with open(file, 'a') as f:
         f.write(f"{message}\n")
