@@ -50,7 +50,7 @@ class DiscordYeet(object):
                             "inline": "false"
                         }
                     ],
-                    "footer": {'text': f'tracked by timbot-{self.config["discord"]["name"].lower()}-us1'},
+                    "footer": {'text': f'tracked by timbot-{self.config["discord"]["name"].lower()}-de1'},
                     "timestamp": str(datetime.utcnow())
                 }]
             }

@@ -149,7 +149,7 @@ def checkClock(filename):
                             f.write(f"{trainingFileName},{res['rec_text']},{confidence}\n")
                 except:
                     helper.writelogmessage(f"couldn't save file {filename} to training folder")
-            if len(tempClock) != 4:
+            if len(tempClock) != 4 or int(tempClock) > 6000:
                 helper.logmessage(f"issue during ocr - ocr: {res['rec_text']}, cleaned: {tempClock}")
                 errorFileName = f"errors/{filename.split('/')[-1]}"
                 shutil.copy(filename, errorFileName)
@@ -303,7 +303,7 @@ while True:
                                     helper.logmessage(f"ignoring timer {counter} because {currentTime} feels too low")
                                     continue
                                 if not trackedTimers[counter][1]:
-                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl, helper.getTime(timezone))
+                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl, helper.getDateTime(timezone))
                                 trackedTimers[counter] = (currentTime, True, lastResetTime)
 
                             # case 2: trackedTime < 6000 and currentTime < trackedTime
@@ -328,7 +328,7 @@ while True:
                                         helper.logmessage(f"ignoring timer {counter} because {currentTime} feels too low")
                                         continue
                                     trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
-                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl, helper.getTime(timezone))
+                                    disc.SendMessage(first, counter + 1, currentTime, angelcamUrl, helper.getDateTime(timezone))
                                 else:
                                     trackedTimers[counter] = (currentTime, False, lastResetTime)
 
