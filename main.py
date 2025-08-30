@@ -1,24 +1,32 @@
+import discord
+import helper
+import json
+import migrations
 import os
 import subprocess
-import helper
 import time
-import json
-import requests
-import re
 import random
+import re
+import requests
 import shutil
-import discord
-from paddleocr import TextRecognition
+
+helper.logmessage("============= loading steakcam ==============")
 
 helper.createfolder('errors')
 helper.createfolder('live')
 helper.createfolder('train')
 
-helper.logmessage("============ loading ocr engine =============")
+helper.logmessage("============== loading config ===============")
+
+# migrate any missing configuration, then load the config
+migrations.MigrateConfig()
 
 with open("config.json", "r") as f:
     ocrConfig = json.load(f)
 
+helper.logmessage("============ loading ocr engine =============")
+
+from paddleocr import TextRecognition
 ocr = TextRecognition(**ocrConfig["ocrEngine"]["args"])
 
 session = requests.session()
@@ -47,13 +55,10 @@ runTime = int(time.time())
 # currentTimer is the current number on the board
 # hasAlerted is whether there was an alert recently (redundant?)
 # lastResetTime is when the clock was last reset to 6000 (60:00) or hit 0000 (00:00)
-if "timers" not in ocrConfig:
+if len(ocrConfig["timers"]) != 6:
     trackedTimers = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
 else:
-    if len(ocrConfig["timers"]) != 6:
-        trackedTimers = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
-    else:
-        trackedTimers = ocrConfig["timers"]
+    trackedTimers = ocrConfig["timers"]
 
 
 tsFileRegex = re.compile('(.*.ts)')
@@ -63,10 +68,11 @@ m3u8Regex = re.compile('source[\': ]+(.*)\',')
 angelcamUrl = "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"
 timezone = "US/Central"
 
+dailyChallengeCount = 0
+
 # set up end
 
 # functions start
-
 
 def saveConfig(data):
     with open("config.json", "w") as f:
@@ -172,63 +178,50 @@ def getFrames(file, randomFrame=False):
     """
     Crop Positions
 
-    First set of clocks are at
-    width: 650px - 1400px (750px wide)
-    height: 0px - 110px (110px long)
-    this is "crop=720:110:650:0"
-    note that a box needs to be drawn as well due to the security cam time
-    drawbox=x=0:y=80:w=160:h=30:color=black:t=fill
-
-    Second set of clocks are at
-    width: 1550px - 2350px (800px wide)
-    height: 40px - 170px (130px long)
-    this is "crop=800:130:1550:40"
-
-
     First Clock
-    x: 650
+    x: 630
     y: 0
     w: 240
     h: 90
-    this is "crop=240:90:650:0"
+    this is "crop=240:90:630:0"
 
     Second Clock
-    x: 890
+    x: 870
     y: 10
     w: 240
     h: 90
-    this is "crop=240:90:890:10"
+    this is "crop=240:90:870:10"
 
     Third Clock
-    x: 1130
+    x: 1110
     y: 15
     w: 240
     h: 90
-    this is "crop=240:90:1150:15"
+    this is "crop=240:90:1110:15"
 
     Fourth Clock
-    x: 1580
+    x: 1550
     y: 35
     w: 240
     h: 100
-    this is "crop=240:100:1580:35"
+    this is "crop=240:100:1550:35"
 
     Fifth Clock
-    x: 1830
+    x: 1800
     y: 40
     w: 240
     h: 100
-    this is "crop=240:100:1830:40"
+    this is "crop=240:100:1800:40"
 
     Sixth Clock
-    x: 2070
+    x: 2050
     y: 65
     w: 240
     h: 100
     this is "crop=240:100:2070:65"
 
     """
-    clocks = [("clock1", "crop=240:90:650:0"), ("clock2", "crop=240:90:890:10"), ("clock3", "crop=240:90:1130:20"), ("clock4", "crop=240:100:1580:35"), ("clock5", "crop=240:100:1830:40"), ("clock6", "crop=240:100:2070:65")]
+    clocks = [("clock1", "crop=240:90:630:0"), ("clock2", "crop=240:90:870:10"), ("clock3", "crop=240:90:1110:20"), ("clock4", "crop=240:100:1550:35"), ("clock5", "crop=240:100:1800:40"), ("clock6", "crop=240:100:2050:60")]
     timerTimes = []
     frame = 2
 
@@ -274,6 +267,9 @@ while True:
 
     # sleep for 5-10 mins if the restaurant is closed
     if not isWithin:
+        if dailyChallengeCount > 0 and ocrConfig["shouldSendWrapup"]:
+            helper.logmessage(f"there were a total of {dailyChallengeCount} steak challenges today")
+        dailyChallengeCount = 0
         helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
         sleeptime = random.randint(300, 600)
 
@@ -303,6 +299,7 @@ while True:
                                     helper.logmessage(f"ignoring timer {counter} because {currentTime} feels too low")
                                     continue
                                 if not trackedTimers[counter][1]:
+                                    dailyChallengeCount += 1
                                     disc.SendMessage(first, counter + 1, currentTime, angelcamUrl, helper.getDateTime(timezone))
                                 trackedTimers[counter] = (currentTime, True, lastResetTime)
 
@@ -328,6 +325,7 @@ while True:
                                         helper.logmessage(f"ignoring timer {counter} because {currentTime} feels too low")
                                         continue
                                     trackedTimers[counter] = (currentTime, True, helper.getCurrTimeInInt())
+                                    dailyChallengeCount += 1
                                     disc.SendMessage(first, counter + 1, currentTime, angelcamUrl, helper.getDateTime(timezone))
                                 else:
                                     trackedTimers[counter] = (currentTime, False, lastResetTime)
