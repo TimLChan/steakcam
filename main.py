@@ -175,53 +175,8 @@ def getFrames(file, randomFrame=False):
         helper.logmessage(f"{file} does not exist")
         return False
 
-    """
-    Crop Positions
-
-    First Clock
-    x: 630
-    y: 0
-    w: 240
-    h: 90
-    this is "crop=240:90:630:0"
-
-    Second Clock
-    x: 870
-    y: 10
-    w: 240
-    h: 90
-    this is "crop=240:90:870:10"
-
-    Third Clock
-    x: 1110
-    y: 15
-    w: 240
-    h: 90
-    this is "crop=240:90:1110:15"
-
-    Fourth Clock
-    x: 1550
-    y: 35
-    w: 240
-    h: 100
-    this is "crop=240:100:1550:35"
-
-    Fifth Clock
-    x: 1800
-    y: 40
-    w: 240
-    h: 100
-    this is "crop=240:100:1800:40"
-
-    Sixth Clock
-    x: 2050
-    y: 65
-    w: 240
-    h: 100
-    this is "crop=240:100:2070:65"
-
-    """
-    clocks = [("clock1", "crop=240:90:630:0"), ("clock2", "crop=240:90:870:10"), ("clock3", "crop=240:90:1110:20"), ("clock4", "crop=240:100:1550:35"), ("clock5", "crop=240:100:1800:40"), ("clock6", "crop=240:100:2050:60")]
+    # note - the crop below is in the format of w:h:x:y
+    clocks = [("clock1", "crop=240:90:630:30"), ("clock2", "crop=240:90:870:20"), ("clock3", "crop=240:90:1110:30"), ("clock4", "crop=240:100:1530:35"), ("clock5", "crop=240:100:1780:50"), ("clock6", "crop=240:100:2030:66")]
     timerTimes = []
     frame = 2
 
@@ -248,10 +203,10 @@ def getFrames(file, randomFrame=False):
             helper.logmessage(f"{clock[0]} result: {timerResult} | confidence: {timerConfidence}")
 
         try:
-            os.remove(filename)
+           os.remove(filename)
         except Exception as e:
-            helper.writelogmessage(f"could not delete {filename}, error below:")
-            helper.logmessage(e)
+           helper.writelogmessage(f"could not delete {filename}, error below:")
+           helper.logmessage(e)
 
     return timerTimes
 
