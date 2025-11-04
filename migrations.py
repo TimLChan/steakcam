@@ -2,10 +2,12 @@ import helper
 import json
 import time
 
+
 def saveConfig(data):
     with open("config.json", "w") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
         f.flush()
+
 
 def MigrateConfig():
     # this helps migrate old configuration files to newer ones with hopefully no loss of functionality
@@ -27,3 +29,10 @@ def MigrateConfig():
         ocrConfig["shouldSendWrapup"] = False
         saveConfig(ocrConfig)
         helper.logmessage("migration - shouldSendWrapup defaulted to false. Please update the config to enable the end of day wrapup feature.")
+
+    # videoUrl - this is the url of the video feed
+    # default - "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"
+    if "videoUrl" not in ocrConfig or ocrConfig["videoUrl"] == None:
+        ocrConfig["videoUrl"] = "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"
+        saveConfig(ocrConfig)
+        helper.logmessage("migration - videoUrl defaulted to https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1.")

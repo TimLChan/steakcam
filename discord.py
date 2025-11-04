@@ -17,6 +17,10 @@ class DiscordYeet(object):
     def SendMessage(self, first, timer=1, timeRemaining=6000, streamUrl="https://www.bigtexan.com/live-stream/", currentTime="unknown"):
         if first:
             return
+        # there is likely something wrong if the timer is less than 3500. 
+        # this is a janky way to ignore issues with timer0 having the IP camera time overlaid on the actual timer
+        if timeRemaining < 3500:
+            return
         timerRemainingStr = str(timeRemaining)
         if len(timerRemainingStr) == 4:
             timerRemainingStr = f"{timerRemainingStr[:2]}:{timerRemainingStr[2:]}"
