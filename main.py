@@ -176,7 +176,7 @@ def getFrames(file, randomFrame=False, fullframe=False, cleanup=True):
         return False
 
     # note - the crop below is in the format of w:h:x:y
-    clocks = [("clock1", "crop=240:90:710:30"), ("clock2", "crop=240:90:940:35"), ("clock3", "crop=240:90:1170:40"), ("clock4", "crop=240:100:1610:65"), ("clock5", "crop=240:100:1850:80"), ("clock6", "crop=240:100:2090:90")]
+    clocks = [("clock1", "crop=240:90:490:60"), ("clock2", "crop=240:90:730:55"), ("clock3", "crop=240:90:960:50"), ("clock4", "crop=240:100:1390:50"), ("clock5", "crop=240:100:1635:50"), ("clock6", "crop=240:100:1875:60")]
     timerTimes = []
     frame = 2
 
