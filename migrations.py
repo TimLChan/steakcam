@@ -17,7 +17,7 @@ def MigrateConfig():
 
     # timers - this is the list of timers that are being tracked
     # default - (6000, False, runTime)
-    if "timers" not in ocrConfig:
+    if "timers" not in ocrConfig or len(ocrConfig.get("timers", [])) != 6:
         runTime = int(time.time())
         ocrConfig["timers"] = [(6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime), (6000, False, runTime)]
         saveConfig(ocrConfig)
@@ -36,3 +36,9 @@ def MigrateConfig():
         ocrConfig["videoUrl"] = "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"
         saveConfig(ocrConfig)
         helper.logmessage("migration - videoUrl defaulted to https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1.")
+
+    # filters - this is whether to apply some jank-ish dilation logic
+    if "filters" not in ocrConfig["ocrEngine"] or ocrConfig["ocrEngine"]["filters"] == None:
+        ocrConfig["ocrEngine"]["filters"] = {"clock1": False, "clock2": False, "clock3": False, "clock4": False, "clock5": False, "clock6": False}
+        saveConfig(ocrConfig)
+        helper.logmessage("migration - filters defaulted to false for all timers.")
