@@ -197,9 +197,11 @@ cython_debug/
 backup/*
 tests/*
 training/*
+train/*
+recordings/*
 
 config.json
 
-*.jpg
+#*.jpg
 *.txt
 *.ts
