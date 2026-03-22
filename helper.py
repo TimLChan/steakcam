@@ -56,5 +56,6 @@ def withinTimePeriod(start="15:58:59", end="16:01:30", timezone="Australia/Melbo
 
 def writelogmessage(msg="", file="error.log", timezone="Australia/Melbourne"):
     message = ('[{}] {}').format(datetime.now(pytz.timezone(timezone)).strftime('%Y-%m-%d %I:%M:%S %p'), msg)
+    print(message)
     with open(file, 'a') as f:
         f.write(f"{message}\n")

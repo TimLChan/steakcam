@@ -2,3 +2,5 @@ pytz
 paddleocr
 requests
 paddlepaddle
+Pillow
+numpy
