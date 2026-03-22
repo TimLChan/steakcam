@@ -1,5 +1,4 @@
 import requests
-
 import helper
 from clients.angelcam_client import AngelcamClient
 from clients.discord_client import DiscordNotifier
