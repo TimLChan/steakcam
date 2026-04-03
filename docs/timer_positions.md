@@ -1,43 +1,49 @@
-    Crop Positions
+## Crop Positions
 
-    First Clock
-    x: 630
-    y: 0
-    w: 240
-    h: 90
-    this is "crop=240:90:630:0"
+### First Clock
 
-    Second Clock
-    x: 870
-    y: 10
-    w: 240
-    h: 90
-    this is "crop=240:90:870:10"
+x: 720
+y: 37
+w: 240
+h: 100
+this is "crop=240:100:720:37"
 
-    Third Clock
-    x: 1110
-    y: 15
-    w: 240
-    h: 90
-    this is "crop=240:90:1110:15"
+### Second Clock
 
-    Fourth Clock
-    x: 1550
-    y: 35
-    w: 240
-    h: 100
-    this is "crop=240:100:1550:35"
+x: 950
+y: 40
+w: 240
+h: 100
+this is "crop=240:100:950:40"
 
-    Fifth Clock
-    x: 1800
-    y: 40
-    w: 240
-    h: 100
-    this is "crop=240:100:1800:40"
+### Third Clock
 
-    Sixth Clock
-    x: 2050
-    y: 65
-    w: 240
-    h: 100
-    this is "crop=240:100:2070:65"
+x: 1190
+y: 50
+w: 240
+h: 100
+this is "crop=240:100:1190:50"
+
+### Fourth Clock
+
+x: 1620
+y: 70
+w: 240
+h: 100
+this is "crop=240:100:1620:70"
+
+### Fifth Clock
+
+x: 1870
+y: 85
+w: 240
+h: 100
+this is "crop=240:100:1870:85"
+
+### Sixth Clock
+
+x: 2100
+y: 100
+w: 240
+h: 100
+this is "crop=240:100:2100:100"

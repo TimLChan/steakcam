@@ -31,10 +31,10 @@ HEADERS = {
 
 # Clock crop definitions (ffmpeg format: w:h:x:y)
 CLOCK_CROP_DEFINITIONS = [
-    ("clock1", "crop=240:90:490:60"),
-    ("clock2", "crop=240:90:730:55"),
-    ("clock3", "crop=240:90:960:50"),
-    ("clock4", "crop=240:100:1390:50"),
-    ("clock5", "crop=240:100:1635:50"),
-    ("clock6", "crop=240:100:1875:60"),
+    ("clock1", "crop=240:100:720:37"),
+    ("clock2", "crop=240:100:950:40"),
+    ("clock3", "crop=240:100:1190:50"),
+    ("clock4", "crop=240:100:1620:70"),
+    ("clock5", "crop=240:100:1870:85"),
+    ("clock6", "crop=240:100:2100:100"),
 ]

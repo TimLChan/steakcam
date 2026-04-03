@@ -35,7 +35,6 @@ def run_once(
         return daily_challenge_count, sleep_time
 
     m3u8_url, has_err = angelcam.get_m3u8(settings.video_url)
-    print(has_err)
     if has_err is False:
         downloaded_video_file, has_err = angelcam.download_video(m3u8_url)
         if has_err is False:

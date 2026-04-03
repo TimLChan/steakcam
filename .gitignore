@@ -199,7 +199,9 @@ tests/*
 training/*
 train/*
 recordings/*
-
+ignore/*
+live/*
+errors/*
 config.json
 
 #*.jpg
