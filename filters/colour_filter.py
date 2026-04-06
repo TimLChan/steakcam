@@ -88,6 +88,11 @@ def apply_filter(image_path, output_path=None):
 
     return result_img
 
+def replace_with_white(image_path, output_path=None,
+                       min_red=110, max_green=100, max_blue=150,
+                       red_dominance_ratio=1.5,
+                       save_mask=False, mask_path=None):
+    return
 
 def main():
     """

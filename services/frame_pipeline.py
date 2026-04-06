@@ -6,7 +6,7 @@ import time
 import helper
 from clients.ocr_client import OcrClient
 from config import CLOCK_CROP_DEFINITIONS
-from filters import dilation
+from filters import colour_filter as CustomFilter
 
 
 class FramePipeline:
@@ -64,8 +64,8 @@ class FramePipeline:
             else:
                 if apply_filters and self.filter_config.get(clock_name, False):
                     try:
-                        dilation.apply_filter(filename, filename)
-                        dilation.replace_with_white(filename, filename)
+                        CustomFilter.apply_filter(filename, filename)
+                        CustomFilter.replace_with_white(filename, filename)
                     except Exception as e:
                         helper.writelogmessage(f"Error applying filter to {clock_name}: {e}")
 

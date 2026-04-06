@@ -17,4 +17,4 @@ video_file, _ = angelcam.download_video(m3u8)
 # change full_frame to True to get the full video image
 # then refine the co-ordinates in config.py
 # set full_frame to False to test the new crop
-print(pipeline.get_frames(video_file, full_frame=False, cleanup=False, apply_filters=False))
+print(pipeline.get_frames(video_file, full_frame=False, cleanup=False, apply_filters=True))
