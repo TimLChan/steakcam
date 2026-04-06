@@ -28,7 +28,7 @@ def run_once(
 
     if not is_within:
         if settings.should_send_wrapup and not state.wrapup_sent_today:
-            notifier.send_wrapup(daily_challenge_count, settings.timezone)
+            notifier.send_wrapup(daily_challenge_count, settings.timezone, first)
             state.wrapup_sent_today = True
             helper.logmessage(f"sent wrapup: {daily_challenge_count} challengers today")
         daily_challenge_count = 0
@@ -67,6 +67,14 @@ def run_once(
                             continue
 
                         if transition.alert_event is not None:
+                            # Sanity guard - likely OCR misread
+                            if transition.alert_event.time_remaining < 3500:
+                                continue
+                            # Additional sanity guard added for timer 2 due to CCTV text overlays
+                            if transition.alert_event.time_remaining < 5700 and transition.alert_event.timer_position == 2:
+                                helper.logmessage(f"timer 2 triggered with abnormal time {transition.alert_event.time_remaining}")
+                                continue
+
                             daily_challenge_count += 1
                             notifier.send_message(
                                 first,
