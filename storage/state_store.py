@@ -14,6 +14,7 @@ class StateStore:
     def __init__(self, config_path: str = CONFIG_FILE):
         self._path = config_path
         self.daily_challenge_count = 0
+        self.wrapup_sent_today = False
         self._load()
 
     @property

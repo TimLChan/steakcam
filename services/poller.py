@@ -27,12 +27,17 @@ def run_once(
     sleep_time = 60
 
     if not is_within:
-        if daily_challenge_count > 0 and settings.should_send_wrapup:
-            helper.logmessage(f"there were a total of {daily_challenge_count} steak challenges today")
+        if settings.should_send_wrapup and not state.wrapup_sent_today:
+            notifier.send_wrapup(daily_challenge_count, settings.timezone)
+            state.wrapup_sent_today = True
+            helper.logmessage(f"sent wrapup: {daily_challenge_count} challengers today")
         daily_challenge_count = 0
         helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
         sleep_time = random.randint(300, 600)
         return daily_challenge_count, sleep_time
+
+    if state.wrapup_sent_today:
+        state.wrapup_sent_today = False
 
     m3u8_url, has_err = angelcam.get_m3u8(settings.video_url)
     if has_err is False:

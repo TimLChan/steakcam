@@ -18,6 +18,32 @@ class DiscordNotifier:
         self._avatar_url = discord_config["avatar"]
         self._webhooks = discord_config["webhooks"]
 
+    def send_wrapup(self, daily_challenge_count: int, timezone_name: str) -> None:
+        """Send an end-of-day wrapup message summarising the number of challenges."""
+        formatted_date = helper.getFormattedDate(timezone_name)
+        payload = {
+            "username": self._name,
+            "avatar_url": self._avatar_url,
+            "embeds": [
+                {
+                    "title": f"Steak Challenge Wrapup for {formatted_date}",
+                    "fields": [
+                        {
+                            "name": "challengers today",
+                            "value": f"{daily_challenge_count} challengers",
+                            "inline": "false",
+                        }
+                    ],
+                    "footer": {"text": f"tracked by timbot-{self._name}-de1"},
+                    "timestamp": str(datetime.now(timezone.utc)),
+                }
+            ],
+        }
+
+        for webhook in self._webhooks:
+            self._send_with_retry(webhook, payload)
+            time.sleep(0.4)
+
     def send_message(
         self,
         first: bool,

@@ -21,6 +21,10 @@ MIN_VALID_TRIGGER_TIME = 100
 # Helps prevent double-alerting if the stream jumps or the timer resets briefly.
 OVERLAP_REARM_SECONDS = 1200
 
+# Threshold for a "big bounce" (e.g. timer was 40:00, now it's 50:00)
+# If the timer bounces by more than this amount, we treat it as a new challenge.
+BIG_BOUNCE_SECONDS = 1000
+
 # Transition case names for categorization/logging
 CASE_IDLE_TRIGGER = "idle_trigger"
 CASE_TRIGGER_FROM_ZERO = "trigger_from_zero"
@@ -133,13 +137,17 @@ def evaluate_timer_transition(timer_index: int, current_time: int, tracked_timer
     if current_time > tracked_time:
         # If enough time has passed since the timer last reset, we treat it as a new valid challenge.
         if now > (last_reset_time + OVERLAP_REARM_SECONDS):
-            # Same safety check against hallucinated low values
+            # Safety check against hallucinated low values
             if current_time < MIN_VALID_TRIGGER_TIME:
                 return TimerTransition(
                     timer_state=tracked_timer,
                     case=CASE_OVERLAP_TRIGGER,
                     ignored_low_value=True,
                 )
+
+            # TODO: implement this
+            # Safety check on odd bounces, specifically around the 40 minute mark, e.g. going from 31 -> 39
+            # Only trigger if the new time is less than 4000 (40 minutes)
 
             next_state = TimerState(
                 tracked_time=current_time,
