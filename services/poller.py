@@ -28,9 +28,11 @@ def run_once(
 
     if not is_within:
         if settings.should_send_wrapup and not state.wrapup_sent_today:
-            notifier.send_wrapup(daily_challenge_count, settings.timezone, first)
             state.wrapup_sent_today = True
-            helper.logmessage(f"sent wrapup: {daily_challenge_count} challengers today")
+            if not first:
+                notifier.send_wrapup(daily_challenge_count, settings.timezone, first)
+                helper.logmessage(f"sent wrapup: {daily_challenge_count} challengers today")
+
         daily_challenge_count = 0
         helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
         sleep_time = random.randint(300, 600)
