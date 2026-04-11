@@ -14,7 +14,7 @@
             "cpu_threads": 1
         },
         "filters": {
-            "clock1": false,
+            "clock1": true,
             "clock2": false,
             "clock3": false,
             "clock4": false,
