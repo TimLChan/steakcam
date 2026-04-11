@@ -18,6 +18,12 @@ def createfolder(foldername):
 def getDateTime(timezone="Australia/Melbourne"):
     return str(datetime.now(pytz.timezone(timezone)).strftime('%b %d - %I:%M:%S %p %Z'))
 
+def getFormattedDate(timezone="Australia/Melbourne"):
+    now = datetime.now(pytz.timezone(timezone))
+    day = now.day
+    suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    return now.strftime(f"%a {day}{suffix} %B %Y")
+
 def getlogtime(timezone="Australia/Melbourne"):
     return datetime.now(pytz.timezone(timezone)).strftime('%Y-%m-%d %I:%M:%S %p')
 

@@ -18,6 +18,34 @@ class DiscordNotifier:
         self._avatar_url = discord_config["avatar"]
         self._webhooks = discord_config["webhooks"]
 
+    def send_wrapup(self, daily_challenge_count: int, timezone_name: str, first: bool) -> None:
+        """Send an end-of-day wrapup message summarising the number of challenges."""
+        if first:
+            return
+        formatted_date = helper.getFormattedDate(timezone_name)
+        payload = {
+            "username": self._name,
+            "avatar_url": self._avatar_url,
+            "embeds": [
+                {
+                    "title": f"Steak Challenge Wrapup for {formatted_date}",
+                    "fields": [
+                        {
+                            "name": "challengers today",
+                            "value": f"{daily_challenge_count} challengers",
+                            "inline": "false",
+                        }
+                    ],
+                    "footer": {"text": f"tracked by timbot-{self._name}-de1"},
+                    "timestamp": str(datetime.now(timezone.utc)),
+                }
+            ],
+        }
+
+        for webhook in self._webhooks:
+            self._send_with_retry(webhook, payload)
+            time.sleep(0.4)
+
     def send_message(
         self,
         first: bool,
@@ -36,14 +64,6 @@ class DiscordNotifier:
             current_time: Formatted current time string for the embed.
         """
         if first:
-            return
-
-        # Sanity guards - likely OCR misreads
-        # Additional sanity guard added for timer 2 due to CCTV text overlays
-        if time_remaining < 3500 or time_remaining == 5000:
-            return
-        if time_remaining < 5700 and timer == 2:
-            helper.logmessage(f"timer 2 triggered with abnormal time {time_remaining}")
             return
 
         timer_remaining_str = str(time_remaining)
