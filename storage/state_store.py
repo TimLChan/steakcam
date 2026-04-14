@@ -2,19 +2,21 @@
 
 import json
 
-from config import CONFIG_FILE
+from config import CONFIG_FILE, DB_FILE
+from storage.challenge_store import ChallengeStore
 
 
 class StateStore:
     """Reads and writes the mutable ``timers`` section of ``config.json``.
 
     Keeps timer state in memory and persists on :meth:`save`.
+    Also owns a :class:`ChallengeStore` for SQLite-backed daily challenge counts.
     """
 
-    def __init__(self, config_path: str = CONFIG_FILE):
+    def __init__(self, config_path: str = CONFIG_FILE, db_path: str = DB_FILE):
         self._path = config_path
-        self.daily_challenge_count = 0
         self.wrapup_sent_today = False
+        self.challenges = ChallengeStore(db_path)
         self._load()
 
     @property

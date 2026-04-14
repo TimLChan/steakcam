@@ -7,6 +7,7 @@ DEFAULT_TIMEZONE = "US/Central"
 
 # Persistence
 CONFIG_FILE = "config.json"
+DB_FILE = "challenges.db"
 
 # AngelCam defaults
 DEFAULT_VIDEO_URL = "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"

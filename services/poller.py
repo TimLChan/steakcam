@@ -40,6 +40,7 @@ def run_once(
 
     if state.wrapup_sent_today:
         state.wrapup_sent_today = False
+        daily_challenge_count = state.challenges.get_today_count(settings.timezone)
 
     m3u8_url, has_err = angelcam.get_m3u8(settings.video_url)
     if has_err is False:
@@ -78,6 +79,7 @@ def run_once(
                                 continue
 
                             daily_challenge_count += 1
+                            state.challenges.increment_today(settings.timezone)
                             notifier.send_message(
                                 first,
                                 transition.alert_event.timer_position,
@@ -112,7 +114,7 @@ def run_forever(
     pipeline: FramePipeline,
     notifier: DiscordNotifier,
 ) -> None:
-    daily_challenge_count = state.daily_challenge_count
+    daily_challenge_count = state.challenges.get_today_count(settings.timezone)
     while True:
         daily_challenge_count, sleep_time = run_once(
             first=first,
@@ -124,6 +126,5 @@ def run_forever(
             notifier=notifier,
         )
         first = False
-        state.daily_challenge_count = daily_challenge_count
         helper.logmessage(f"========== sleeping for {sleep_time} seconds ==========")
         time.sleep(sleep_time)
