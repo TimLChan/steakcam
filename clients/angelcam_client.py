@@ -11,8 +11,11 @@ class AngelcamClient:
 
     def __init__(self, session: requests.Session):
         self.session = session
-        self._m3u8_regex = re.compile(r"source[\': ]+(.*)',")
-        self._m3u8_regex_backup = re.compile(r"hls[\': ]+(.*)',")
+        self._m3u8_patterns = [
+            re.compile(r"'hls'\s*:\s*'([^']*)'"),                            # current page format
+            re.compile(r"source[\': ]+([^']*)',"),                            # legacy fallback
+            re.compile(r"""['"]([^'"]*\.m3u8[^'"]*)['"]""", re.IGNORECASE),   # general catch-all
+        ]
         self._ts_file_regex = re.compile(r"(.*.ts)")
         self._unicode_escape_regex = re.compile(r"\\u([0-9a-fA-F]{4})")
 
@@ -31,34 +34,42 @@ class AngelcamClient:
             text,
         )
 
+    def _extract_m3u8(self, html: str) -> str | None:
+        """Return the first m3u8 URL found in *html*, or ``None``.
+
+        Patterns are tried in order: the precise ``'hls'`` form and the
+        legacy ``source`` form first, then a general catch-all that matches
+        any single- or double-quoted string containing ``.m3u8``. Unicode
+        escape sequences in the result are decoded.
+        """
+        for pattern in self._m3u8_patterns:
+            match = pattern.search(html)
+            if match:
+                return self._decode_unicode_escapes(match.group(1))
+        return None
+
     def get_m3u8(self, url: str) -> tuple[str, bool]:
         """Fetch the AngelCam page and extract the m3u8 playlist URL.
 
         Returns:
             (m3u8_url, is_error) — on failure the url may be ``"is_borked"``.
         """
-        is_err = False
-        m3u8_urls: list[str] = []
         helper.logmessage("=============== getting m3u8 ================")
         try:
             video_feed = self.session.get(url, headers=HEADERS, timeout=10)
             if video_feed.status_code != 200:
                 helper.writelogmessage(f"error fetching playlist, http {video_feed.status_code} received")
-                m3u8_urls.append("is_borked")
-                is_err = True
-            m3u8_urls = self._m3u8_regex.findall(video_feed.text)
-            if len(m3u8_urls) == 0:
-                m3u8_urls = self._m3u8_regex_backup.findall(video_feed.text)
-            if len(m3u8_urls) == 0:
+                return "is_borked", True
+
+            m3u8_url = self._extract_m3u8(video_feed.text)
+            if m3u8_url is None:
                 helper.writelogmessage("could not find playlist on page")
-                m3u8_urls.append("is_borked")
-                is_err = True
+                return "is_borked", True
+            return m3u8_url, False
         except Exception as e:
             helper.writelogmessage("error fetching playlist")
             helper.writelogmessage(e)
-            m3u8_urls.append("is_borked")
-            is_err = True
-        return self._decode_unicode_escapes(m3u8_urls[0]), is_err
+            return "is_borked", True
 
     def download_video(self, m3u8_url: str) -> tuple[str, bool]:
         """Download the latest .ts segment from the m3u8 playlist.
