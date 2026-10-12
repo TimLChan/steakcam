@@ -195,7 +195,7 @@ cython_debug/
 
 # Custom
 backup/*
-tests/*
+#tests/*
 training/*
 train/*
 recordings/*

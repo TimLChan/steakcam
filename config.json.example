@@ -24,6 +24,7 @@
     },
     "timezone": "US/Central",
     "shouldSendWrapup": true,
+    "shouldReportWinners": false,
     "timers": [
         [6000, false, 1749955286],
         [6000, false, 1749955286],

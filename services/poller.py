@@ -7,7 +7,7 @@ from clients.discord_client import DiscordNotifier
 from config import DEFAULT_CLOSE_TIME, DEFAULT_OPEN_TIME
 from models import TimerState
 from services.frame_pipeline import FramePipeline
-from services.timer_engine import CASE_IDLE_TRIGGER, CASE_UNCHANGED, evaluate_timer_transition
+from services.timer_engine import CASE_IDLE_TRIGGER, CASE_UNCHANGED, CASE_WIN, evaluate_timer_transition
 from storage.settings_store import SettingsStore
 from storage.state_store import StateStore
 
@@ -30,8 +30,11 @@ def run_once(
         if settings.should_send_wrapup and not state.wrapup_sent_today:
             state.wrapup_sent_today = True
             if not first:
-                notifier.send_wrapup(daily_challenge_count, settings.timezone, first)
-                helper.logmessage(f"sent wrapup: {daily_challenge_count} challengers today")
+                win_count = None
+                if settings.should_report_winners:
+                    win_count = state.challenges.get_today_win_count(settings.timezone)
+                notifier.send_wrapup(daily_challenge_count, settings.timezone, first, win_count=win_count)
+                helper.logmessage(f"sent wrapup: {daily_challenge_count} challengers, {win_count} winners today")
 
         daily_challenge_count = 0
         helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
@@ -87,6 +90,24 @@ def run_once(
                                 settings.video_url,
                                 helper.getDateTime(timezone),
                             )
+
+                        if transition.case == CASE_WIN and transition.win_event is not None:
+                            win = transition.win_event
+                            helper.logmessage(f"timer {counter} stopped at {win.time_remaining}, likely winner")
+                            inserted = state.challenges.record_win(
+                                settings.timezone,
+                                win.timer_position,
+                                win.time_remaining,
+                                win.challenge_started_at,
+                            )
+                            if inserted and settings.should_report_winners:
+                                notifier.send_win_message(
+                                    first,
+                                    win.timer_position,
+                                    win.time_remaining,
+                                    settings.video_url,
+                                    helper.getDateTime(timezone),
+                                )
 
                         if transition.case == CASE_UNCHANGED:
                             continue

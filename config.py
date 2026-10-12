@@ -2,7 +2,9 @@
 
 # Business hours (Big Texan restaurant, Amarillo TX)
 DEFAULT_OPEN_TIME = "08:00"
-DEFAULT_CLOSE_TIME = "23:00"
+# The dining room closes at 22:30 and challenges can start any time before then, so keep
+# watching for an hour (plus slack) afterwards to catch late finishes.
+DEFAULT_CLOSE_TIME = "23:45"
 DEFAULT_TIMEZONE = "US/Central"
 
 # Persistence

@@ -1,3 +1,4 @@
+import hashlib
 import re
 
 import requests
@@ -18,6 +19,8 @@ class AngelcamClient:
         ]
         self._ts_file_regex = re.compile(r"(.*.ts)")
         self._unicode_escape_regex = re.compile(r"\\u([0-9a-fA-F]{4})")
+        # Hash of the last downloaded segment, used to detect a stalled stream
+        self._last_segment_hash: str | None = None
 
     def _decode_unicode_escapes(self, text: str) -> str:
         """Decode JS-style \\uXXXX escape sequences (e.g. ``\\u002D`` -> ``-``).
@@ -75,7 +78,8 @@ class AngelcamClient:
         """Download the latest .ts segment from the m3u8 playlist.
 
         Returns:
-            (filename, is_error)
+            (filename, is_error) — ``is_error`` is also ``True`` when the segment is
+            identical to the previous download (stalled stream), so the loop is skipped.
         """
         is_err = False
         helper.logmessage("============= downloading video =============")
@@ -92,6 +96,13 @@ class AngelcamClient:
 
             ts_file_url = m3u8_url.split("playlist.m3u8")[0] + ts_files[-1]
             video_file = self.session.get(ts_file_url, headers=HEADERS, timeout=10)
+
+            # A stalled stream would make every running timer look stopped (i.e. a false win)
+            segment_hash = hashlib.sha1(video_file.content).hexdigest()
+            if segment_hash == self._last_segment_hash:
+                helper.logmessage("segment unchanged since last poll, skipping")
+                return "video.ts", True
+            self._last_segment_hash = segment_hash
 
             with open("video.ts", "wb") as f:
                 f.write(video_file.content)

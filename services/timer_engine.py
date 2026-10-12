@@ -8,7 +8,7 @@ alert should be dispatched.
 
 from dataclasses import dataclass
 
-from models import AlertEvent, TimerState
+from models import AlertEvent, TimerState, WinEvent
 
 # Special value indicating a timer is not currently tracking an active challenge
 DEFAULT_TIMER_VALUE = 6000
@@ -33,6 +33,7 @@ CASE_RESET = "reset"
 CASE_OVERLAP_TRIGGER = "overlap_trigger"
 CASE_OVERLAP_DEFER = "overlap_defer"
 CASE_UNCHANGED = "unchanged"
+CASE_WIN = "win"
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,7 @@ class TimerTransition:
     timer_state: TimerState
     case: str
     alert_event: AlertEvent | None = None
+    win_event: WinEvent | None = None
     ignored_low_value: bool = False
 
 
@@ -83,6 +85,7 @@ def evaluate_timer_transition(timer_index: int, current_time: int, tracked_timer
             tracked_time=current_time,
             has_alerted=True,
             last_reset_time=last_reset_time,
+            has_won=False,
         )
         alert_event = None
         # Only create an alert if we haven't technically alerted for this tracking session
@@ -109,6 +112,7 @@ def evaluate_timer_transition(timer_index: int, current_time: int, tracked_timer
             tracked_time=current_time,
             has_alerted=True,
             last_reset_time=now,  # Start a fresh challenge
+            has_won=False,
         )
         return TimerTransition(
             timer_state=next_state,
@@ -124,6 +128,7 @@ def evaluate_timer_transition(timer_index: int, current_time: int, tracked_timer
             tracked_time=current_time,
             has_alerted=tracked_timer.has_alerted,
             last_reset_time=last_reset_time,
+            has_won=tracked_timer.has_won,
         )
         return TimerTransition(timer_state=next_state, case=CASE_DECREMENT)
 
@@ -133,6 +138,7 @@ def evaluate_timer_transition(timer_index: int, current_time: int, tracked_timer
             tracked_time=DEFAULT_TIMER_VALUE,
             has_alerted=False,
             last_reset_time=now,
+            has_won=False,
         )
         return TimerTransition(timer_state=next_state, case=CASE_RESET)
 
@@ -157,6 +163,7 @@ def evaluate_timer_transition(timer_index: int, current_time: int, tracked_timer
                 tracked_time=current_time,
                 has_alerted=True,
                 last_reset_time=now,  # Treating this as a fresh start
+                has_won=False,
             )
             return TimerTransition(
                 timer_state=next_state,
@@ -170,8 +177,28 @@ def evaluate_timer_transition(timer_index: int, current_time: int, tracked_timer
             tracked_time=current_time,
             has_alerted=False,  # Don't consider this a valid 'alerted' run since it was just a bounce
             last_reset_time=last_reset_time,
+            has_won=tracked_timer.has_won,  # A bounce on a stopped clock shouldn't allow a second win
         )
         return TimerTransition(timer_state=next_state, case=CASE_OVERLAP_DEFER)
 
-    # CASE 6: Unchanged. The current reading exactly matches what we already knew.
+    # CASE 6: Win. The reading matches the last tracked value (and isn't 0 or 6000), meaning
+    # staff have stopped the clock. Only record one win per challenge.
+    if not tracked_timer.has_won:
+        next_state = TimerState(
+            tracked_time=tracked_time,
+            has_alerted=tracked_timer.has_alerted,
+            last_reset_time=last_reset_time,
+            has_won=True,
+        )
+        return TimerTransition(
+            timer_state=next_state,
+            case=CASE_WIN,
+            win_event=WinEvent(
+                timer_position=timer_index + 1,
+                time_remaining=current_time,
+                challenge_started_at=last_reset_time,
+            ),
+        )
+
+    # CASE 7: Unchanged. The clock is still stopped on a win we've already recorded.
     return TimerTransition(timer_state=tracked_timer, case=CASE_UNCHANGED)

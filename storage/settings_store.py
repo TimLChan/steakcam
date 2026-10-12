@@ -33,6 +33,10 @@ class SettingsStore:
         return self._data.get("shouldSendWrapup", False)
 
     @property
+    def should_report_winners(self) -> bool:
+        return self._data.get("shouldReportWinners", False)
+
+    @property
     def ocr_engine_args(self) -> dict:
         return self._data["ocrEngine"]["args"]
 
@@ -74,6 +78,15 @@ class SettingsStore:
             helper.logmessage(
                 "migration - shouldSendWrapup defaulted to false. "
                 "Please update the config to enable the end of day wrapup feature."
+            )
+
+        # shouldReportWinners (beta)
+        if "shouldReportWinners" not in data or data["shouldReportWinners"] is None:
+            data["shouldReportWinners"] = False
+            dirty = True
+            helper.logmessage(
+                "migration - shouldReportWinners defaulted to false. "
+                "Please update the config to enable winner alerts and wrapup stats (beta)."
             )
 
         # videoUrl
