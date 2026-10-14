@@ -1,5 +1,8 @@
 """Tests for reporting winners: Discord payloads, poller wiring and the stale segment guard."""
 
+import json
+import os
+import tempfile
 import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, mock_open, patch
@@ -10,6 +13,7 @@ from clients.angelcam_client import AngelcamClient
 from clients.discord_client import DiscordNotifier
 from services.frame_pipeline import FramePipeline
 from services.poller import run_once
+from services.screencap_buffer import ScreencapBuffer
 from storage.settings_store import SettingsStore
 from storage.state_store import StateStore
 
@@ -70,6 +74,26 @@ class TestWrapupWinners(unittest.TestCase):
         self.assertEqual(fields[1]["value"], "1 challenger (100%)")
 
 
+class TestChallengerMessage(unittest.TestCase):
+
+    def test_challenger_message_payload(self):
+        notifier, session = make_notifier()
+        with patch("time.sleep"):
+            notifier.send_message(False, 3, 5958, "http://stream", "Oct 10 - 07:42:10 PM CDT")
+
+        embed = sent_payload(session)["embeds"][0]
+        self.assertEqual(embed["title"], "New Steak Challenger Identified")
+        self.assertEqual(
+            [(field["name"], field["value"], field["inline"]) for field in embed["fields"]],
+            [
+                ("timer position (from left)", "timer 3", "false"),
+                ("time remaining", "59:58", "false"),
+                ("current time @ the big texan", "Oct 10 - 07:42:10 PM CDT", "false"),
+                ("link", "**[watch stream](http://stream)**", "false"),
+            ],
+        )
+
+
 class TestWinMessage(unittest.TestCase):
 
     def test_win_message_payload(self):
@@ -79,11 +103,21 @@ class TestWinMessage(unittest.TestCase):
 
         embed = sent_payload(session)["embeds"][0]
         self.assertEqual(embed["title"], "Steak Challenge Winner (beta)")
+        self.assertEqual(
+            [(field["name"], field["inline"]) for field in embed["fields"]],
+            [
+                ("timer position (from left)", "false"),
+                ("time remaining", "true"),
+                ("finished in", "true"),
+                ("current time @ the big texan", "false"),
+                ("link", "false"),
+            ],
+        )
         values = {field["name"]: field["value"] for field in embed["fields"]}
         self.assertEqual(values["timer position (from left)"], "timer 3")
         self.assertEqual(values["time remaining"], "32:21")
         self.assertEqual(values["finished in"], "27:39")
-        self.assertEqual(values["time @ the big texan"], "Oct 10 - 07:42:10 PM CDT")
+        self.assertEqual(values["current time @ the big texan"], "Oct 10 - 07:42:10 PM CDT")
 
     def test_win_message_handles_low_values(self):
         notifier, session = make_notifier()
@@ -99,10 +133,45 @@ class TestWinMessage(unittest.TestCase):
         notifier.send_win_message(True, 3, 3221)
         session.post.assert_not_called()
 
+    def test_win_message_without_image_is_sent_as_json(self):
+        notifier, session = make_notifier()
+        with patch("time.sleep"):
+            notifier.send_win_message(False, 3, 3221)
+
+        kwargs = session.post.call_args.kwargs
+        self.assertNotIn("files", kwargs)
+        self.assertNotIn("image", kwargs["json"]["embeds"][0])
+
+    def test_win_message_attaches_screencap(self):
+        notifier, session = make_notifier()
+        with tempfile.TemporaryDirectory() as directory:
+            image_path = os.path.join(directory, "123.jpg")
+            with open(image_path, "wb") as f:
+                f.write(b"jpg-bytes")
+            with patch("time.sleep"):
+                notifier.send_win_message(False, 3, 3221, image_path=image_path)
+
+        session.post.assert_called_once()
+        kwargs = session.post.call_args.kwargs
+        self.assertNotIn("json", kwargs)
+        self.assertEqual(kwargs["files"], {"files[0]": ("winner.jpg", b"jpg-bytes", "image/jpeg")})
+        embed = json.loads(kwargs["data"]["payload_json"])["embeds"][0]
+        self.assertEqual(embed["title"], "Steak Challenge Winner (beta)")
+        self.assertEqual(embed["image"], {"url": "attachment://winner.jpg"})
+
+    def test_missing_screencap_falls_back_to_json(self):
+        notifier, session = make_notifier()
+        with patch("time.sleep"), patch("helper.writelogmessage"):
+            notifier.send_win_message(False, 3, 3221, image_path="does/not/exist.jpg")
+
+        kwargs = session.post.call_args.kwargs
+        self.assertNotIn("files", kwargs)
+        self.assertNotIn("image", kwargs["json"]["embeds"][0])
+
 
 class TestPollerWins(unittest.TestCase):
 
-    def _run(self, readings, *, report_winners, record_win=True, tracked=None):
+    def _run(self, readings, *, report_winners, record_win=True, tracked=None, screencaps=None, capture_ok=True):
         settings = MagicMock(spec=SettingsStore)
         settings.timezone = "US/Central"
         settings.video_url = "http://stream"
@@ -124,6 +193,7 @@ class TestPollerWins(unittest.TestCase):
 
         pipeline = MagicMock(spec=FramePipeline)
         pipeline.get_frames.return_value = readings
+        pipeline.capture_frame.return_value = capture_ok
 
         notifier = MagicMock()
 
@@ -136,7 +206,9 @@ class TestPollerWins(unittest.TestCase):
                 angelcam=angelcam,
                 pipeline=pipeline,
                 notifier=notifier,
+                screencaps=screencaps,
             )
+        self.pipeline = pipeline
         return state, notifier
 
     def test_win_recorded_but_not_sent_when_flag_disabled(self):
@@ -167,6 +239,40 @@ class TestPollerWins(unittest.TestCase):
         state, notifier = self._run(["6000", "6000", "3221", "6000", "6000", "6000"], report_winners=True, tracked=tracked)
         state.challenges.record_win.assert_called_once()
         notifier.send_win_message.assert_called_once()
+
+    def test_win_sends_frame_from_when_the_clock_stopped(self):
+        screencaps = MagicMock(spec=ScreencapBuffer)
+        screencaps.path_for.return_value = "screencaps/200.jpg"
+        screencaps.first_showing.return_value = "screencaps/100.jpg"
+        readings = ["6000", "6000", "3221", "6000", "6000", "6000"]
+
+        _, notifier = self._run(readings, report_winners=True, screencaps=screencaps)
+
+        self.pipeline.capture_frame.assert_called_once_with("file.ts", "screencaps/200.jpg")
+        screencaps.add.assert_called_once_with("screencaps/200.jpg", readings)
+        screencaps.first_showing.assert_called_once_with(2, 3221)
+        self.assertEqual(notifier.send_win_message.call_args.kwargs["image_path"], "screencaps/100.jpg")
+
+    def test_failed_capture_is_not_buffered(self):
+        screencaps = MagicMock(spec=ScreencapBuffer)
+        screencaps.path_for.return_value = "screencaps/200.jpg"
+        screencaps.first_showing.return_value = None
+        _, notifier = self._run(
+            ["6000", "6000", "3221", "6000", "6000", "6000"],
+            report_winners=True,
+            screencaps=screencaps,
+            capture_ok=False,
+        )
+
+        screencaps.add.assert_not_called()
+        self.assertIsNone(notifier.send_win_message.call_args.kwargs["image_path"])
+
+    def test_no_capture_when_flag_disabled(self):
+        screencaps = MagicMock(spec=ScreencapBuffer)
+        self._run(["6000", "6000", "3221", "6000", "6000", "6000"], report_winners=False, screencaps=screencaps)
+
+        self.pipeline.capture_frame.assert_not_called()
+        screencaps.add.assert_not_called()
 
 
 class TestPollerWrapupWinners(unittest.TestCase):

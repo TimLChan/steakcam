@@ -201,6 +201,7 @@ train/*
 recordings/*
 ignore/*
 live/*
+screencaps/*
 errors/*
 config.json
 

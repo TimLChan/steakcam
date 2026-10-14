@@ -7,6 +7,7 @@ from clients.discord_client import DiscordNotifier
 from config import DEFAULT_CLOSE_TIME, DEFAULT_OPEN_TIME
 from models import TimerState
 from services.frame_pipeline import FramePipeline
+from services.screencap_buffer import ScreencapBuffer
 from services.timer_engine import CASE_IDLE_TRIGGER, CASE_UNCHANGED, CASE_WIN, evaluate_timer_transition
 from storage.settings_store import SettingsStore
 from storage.state_store import StateStore
@@ -21,6 +22,7 @@ def run_once(
     angelcam: AngelcamClient,
     pipeline: FramePipeline,
     notifier: DiscordNotifier,
+    screencaps: ScreencapBuffer | None = None,
 ) -> tuple[int, int]:
     timezone = settings.timezone
     is_within = helper.withinTimePeriod(DEFAULT_OPEN_TIME, DEFAULT_CLOSE_TIME, timezone)
@@ -53,6 +55,12 @@ def run_once(
 
             helper.logmessage("============== checking timers ==============")
             if len(live_timers) == 6:
+                # Keep the full frame so a winner alert can show the moment the clock stopped
+                if screencaps is not None and settings.should_report_winners:
+                    screencap_path = screencaps.path_for(int(time.time()))
+                    if pipeline.capture_frame(downloaded_video_file, screencap_path):
+                        screencaps.add(screencap_path, live_timers)
+
                 tracked_timers = state.tracked_timers
                 for counter in range(len(live_timers)):
                     try:
@@ -101,12 +109,16 @@ def run_once(
                                 win.challenge_started_at,
                             )
                             if inserted and settings.should_report_winners:
+                                image_path = None
+                                if screencaps is not None:
+                                    image_path = screencaps.first_showing(counter, win.time_remaining)
                                 notifier.send_win_message(
                                     first,
                                     win.timer_position,
                                     win.time_remaining,
                                     settings.video_url,
                                     helper.getDateTime(timezone),
+                                    image_path=image_path,
                                 )
 
                         if transition.case == CASE_UNCHANGED:
@@ -134,6 +146,7 @@ def run_forever(
     angelcam: AngelcamClient,
     pipeline: FramePipeline,
     notifier: DiscordNotifier,
+    screencaps: ScreencapBuffer | None = None,
 ) -> None:
     daily_challenge_count = state.challenges.get_today_count(settings.timezone)
     while True:
@@ -145,6 +158,7 @@ def run_forever(
             angelcam=angelcam,
             pipeline=pipeline,
             notifier=notifier,
+            screencaps=screencaps,
         )
         first = False
         helper.logmessage(f"========== sleeping for {sleep_time} seconds ==========")

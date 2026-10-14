@@ -1,3 +1,4 @@
+import json
 import time
 from datetime import datetime, timezone
 
@@ -8,6 +9,7 @@ import helper
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2  # seconds
 CHALLENGE_SECONDS = 3600
+WIN_IMAGE_FILENAME = "winner.jpg"
 
 
 def _format_timer(value: int) -> str:
@@ -121,15 +123,15 @@ class DiscordNotifier:
                         {
                             "name": "timer position (from left)",
                             "value": f"timer {timer}",
-                            "inline": "true",
+                            "inline": "false",
                         },
                         {
                             "name": "time remaining",
                             "value": timer_remaining_str,
-                            "inline": "true",
+                            "inline": "false",
                         },
                         {
-                            "name": "time @ the big texan",
+                            "name": "current time @ the big texan",
                             "value": current_time,
                             "inline": "false",
                         },
@@ -156,6 +158,7 @@ class DiscordNotifier:
         time_remaining: int,
         stream_url: str = "https://www.bigtexan.com/live-stream/",
         current_time: str = "unknown",
+        image_path: str | None = None,
     ) -> None:
         """Send a (beta) alert that a challenger has likely won.
 
@@ -165,9 +168,18 @@ class DiscordNotifier:
             time_remaining: Raw timer value the clock was stopped on (e.g. 3221 = 32:21).
             stream_url: URL to the live stream.
             current_time: Formatted current time string for the embed.
+            image_path: Screencap to show in the embed. Sent without an image if it can't be read.
         """
         if first:
             return
+
+        attachment = None
+        if image_path is not None:
+            try:
+                with open(image_path, "rb") as f:
+                    attachment = (WIN_IMAGE_FILENAME, f.read())
+            except OSError as e:
+                helper.writelogmessage(f"could not read screencap {image_path}, sending without it: {e}")
 
         payload = {
             "username": self._name,
@@ -179,7 +191,7 @@ class DiscordNotifier:
                         {
                             "name": "timer position (from left)",
                             "value": f"timer {timer}",
-                            "inline": "true",
+                            "inline": "false",
                         },
                         {
                             "name": "time remaining",
@@ -189,10 +201,10 @@ class DiscordNotifier:
                         {
                             "name": "finished in",
                             "value": _format_elapsed(time_remaining),
-                            "inline": "false",
+                            "inline": "true",
                         },
                         {
-                            "name": "time @ the big texan",
+                            "name": "current time @ the big texan",
                             "value": current_time,
                             "inline": "false",
                         },
@@ -207,22 +219,36 @@ class DiscordNotifier:
                 }
             ],
         }
+        if attachment is not None:
+            payload["embeds"][0]["image"] = {"url": f"attachment://{WIN_IMAGE_FILENAME}"}
 
         for webhook in self._webhooks:
-            self._send_with_retry(webhook, payload)
+            self._send_with_retry(webhook, payload, attachment)
             time.sleep(0.4)
 
-    def _send_with_retry(self, webhook: dict, payload: dict) -> None:
-        """Attempt to POST *payload* to a single webhook, retrying up to MAX_RETRIES."""
+    def _send_with_retry(self, webhook: dict, payload: dict, attachment: tuple[str, bytes] | None = None) -> None:
+        """Attempt to POST *payload* to a single webhook, retrying up to MAX_RETRIES.
+
+        Args:
+            attachment: Optional ``(filename, content)`` JPEG, sent as multipart form data.
+        """
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 helper.logmessage(f"sending notification to {webhook['name']} (attempt {attempt})")
-                resp = self.session.post(
-                    webhook["url"],
-                    headers={"Content-Type": "application/json"},
-                    json=payload,
-                )
-                if resp.status_code == 204:
+                if attachment is None:
+                    resp = self.session.post(
+                        webhook["url"],
+                        headers={"Content-Type": "application/json"},
+                        json=payload,
+                    )
+                else:
+                    filename, content = attachment
+                    resp = self.session.post(
+                        webhook["url"],
+                        data={"payload_json": json.dumps(payload)},
+                        files={"files[0]": (filename, content, "image/jpeg")},
+                    )
+                if resp.status_code in (200, 204):
                     return  # success
                 helper.logmessage(f"discord returned {resp.status_code}: {resp.text}")
             except Exception as e:

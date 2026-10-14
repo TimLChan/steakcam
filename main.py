@@ -4,6 +4,7 @@ from clients.angelcam_client import AngelcamClient
 from clients.discord_client import DiscordNotifier
 from services.frame_pipeline import FramePipeline
 from services.poller import run_forever
+from services.screencap_buffer import ScreencapBuffer
 from storage.settings_store import SettingsStore
 from storage.state_store import StateStore
 
@@ -11,6 +12,7 @@ helper.logmessage("============= loading steakcam ==============")
 helper.createfolder("errors")
 helper.createfolder("live")
 helper.createfolder("train")
+helper.createfolder("screencaps")
 
 helper.logmessage("============== loading config ===============")
 settings = SettingsStore()  # loads config.json + runs migrations
@@ -24,6 +26,7 @@ session = requests.Session()
 angelcam = AngelcamClient(session)
 notifier = DiscordNotifier(settings.discord_config, session)
 pipeline = FramePipeline(ocr, settings.filter_config)
+screencaps = ScreencapBuffer()
 
 first = True  # debug flag: suppresses alerts on first poll cycle
 
@@ -35,4 +38,5 @@ if __name__ == "__main__":
         angelcam=angelcam,
         pipeline=pipeline,
         notifier=notifier,
+        screencaps=screencaps,
     )
