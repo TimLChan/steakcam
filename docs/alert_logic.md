@@ -15,6 +15,7 @@ SteakCam triggers an alert during the following scenarios:
 | Timer too low   | The current reading is less than the minimum valid trigger time                                 | 6000       | 99            | No    |
 | Win (beta)      | The clock has been stopped mid-challenge, see win detection below                               | 3221       | 3221          | Yes*  |
 | Already won     | The clock is still stopped on a win that has already been recorded                              | 3221       | 3221          | No    |
+| Stopped early   | The clock was stopped within 2 minutes of starting, usually staff starting the wrong timer      | 5959       | 5959          | No    |
 
 \* only sent when `shouldReportWinners` is enabled in `config.json`
 
@@ -31,6 +32,7 @@ When a contestant finishes the steak, staff stop their clock. If a running clock
 
 - Wins are always recorded in the database. The `shouldReportWinners` flag (default `false`) only controls the live winner alert and the winners line in the end of day wrapup.
 - The winner alert includes a screencap of the full camera frame from the first poll that showed the stopped time, so the win can be checked by eye. While `shouldReportWinners` is enabled, the frames from the last 3 polls are kept in `screencaps/` and older ones are deleted.
+- A clock stopped within the first 2 minutes (a reading above `5800`) isn't counted. This is usually staff starting the wrong timer and stopping it again.
 - Each challenge can only be counted as a win once. The flag is cleared when the clock is reset to `0000` or `6000`, or a new challenge starts on that clock.
 - A failed OCR read skips the whole poll, so it doesn't break up the two consecutive readings.
 - If the stream stalls and serves the same video segment twice, the poll is skipped. Otherwise every running clock would look stopped.

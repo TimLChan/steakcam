@@ -112,6 +112,26 @@ class TestWinDetection(unittest.TestCase):
         self.assertEqual(transitions[-1].case, CASE_DECREMENT)
         self.assertTrue(state.has_won)
 
+    # ------------------------------------------------------------------
+    # Clocks stopped right after starting
+    # ------------------------------------------------------------------
+
+    def test_clock_stopped_in_first_two_minutes_is_not_a_win(self):
+        transitions, state = run_sequence([5959, 5959, 5959])
+        self.assertEqual([t.case for t in transitions[1:]], [CASE_UNCHANGED, CASE_UNCHANGED])
+        self.assertEqual(wins(transitions), [])
+        self.assertFalse(state.has_won)
+
+    def test_clock_stopped_at_two_minutes_is_a_win(self):
+        transitions, _ = run_sequence([5800, 5800])
+        self.assertEqual(transitions[-1].case, CASE_WIN)
+
+    def test_wrong_clock_restarted_can_still_win(self):
+        transitions, state = run_sequence([5959, 5959, 6000, 4500, 3221, 3221])
+        self.assertEqual(len(wins(transitions)), 1)
+        self.assertEqual(wins(transitions)[0].time_remaining, 3221)
+        self.assertTrue(state.has_won)
+
     def test_idle_and_zero_readings_never_win(self):
         transitions, _ = run_sequence([6000, 6000, 6000, 0, 0, 0])
         self.assertEqual(wins(transitions), [])
