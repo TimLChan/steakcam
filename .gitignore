@@ -195,12 +195,13 @@ cython_debug/
 
 # Custom
 backup/*
-tests/*
+#tests/*
 training/*
 train/*
 recordings/*
 ignore/*
 live/*
+screencaps/*
 errors/*
 config.json
 
