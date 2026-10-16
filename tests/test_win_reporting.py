@@ -240,23 +240,23 @@ class TestPollerWins(unittest.TestCase):
         state.challenges.record_win.assert_called_once()
         notifier.send_win_message.assert_called_once()
 
-    def test_win_sends_frame_from_when_the_clock_stopped(self):
+    def test_win_sends_frame_from_before_the_clock_stopped(self):
         screencaps = MagicMock(spec=ScreencapBuffer)
         screencaps.path_for.return_value = "screencaps/200.jpg"
-        screencaps.first_showing.return_value = "screencaps/100.jpg"
+        screencaps.frame_before_stop.return_value = "screencaps/100.jpg"
         readings = ["6000", "6000", "3221", "6000", "6000", "6000"]
 
         _, notifier = self._run(readings, report_winners=True, screencaps=screencaps)
 
         self.pipeline.capture_frame.assert_called_once_with("file.ts", "screencaps/200.jpg")
         screencaps.add.assert_called_once_with("screencaps/200.jpg", readings)
-        screencaps.first_showing.assert_called_once_with(2, 3221)
+        screencaps.frame_before_stop.assert_called_once_with(2, 3221)
         self.assertEqual(notifier.send_win_message.call_args.kwargs["image_path"], "screencaps/100.jpg")
 
     def test_failed_capture_is_not_buffered(self):
         screencaps = MagicMock(spec=ScreencapBuffer)
         screencaps.path_for.return_value = "screencaps/200.jpg"
-        screencaps.first_showing.return_value = None
+        screencaps.frame_before_stop.return_value = None
         _, notifier = self._run(
             ["6000", "6000", "3221", "6000", "6000", "6000"],
             report_winners=True,

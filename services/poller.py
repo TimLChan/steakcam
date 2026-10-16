@@ -55,7 +55,7 @@ def run_once(
 
             helper.logmessage("============== checking timers ==============")
             if len(live_timers) == 6:
-                # Keep the full frame so a winner alert can show the moment the clock stopped
+                # Keep the full frame so a winner alert can show the moment before the clock stopped
                 if screencaps is not None and settings.should_report_winners:
                     screencap_path = screencaps.path_for(int(time.time()))
                     if pipeline.capture_frame(downloaded_video_file, screencap_path):
@@ -111,7 +111,7 @@ def run_once(
                             if inserted and settings.should_report_winners:
                                 image_path = None
                                 if screencaps is not None:
-                                    image_path = screencaps.first_showing(counter, win.time_remaining)
+                                    image_path = screencaps.frame_before_stop(counter, win.time_remaining)
                                 notifier.send_win_message(
                                     first,
                                     win.timer_position,

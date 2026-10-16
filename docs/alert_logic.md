@@ -31,7 +31,7 @@ The timer is reset in the following scenarios when it is ready to go
 When a contestant finishes the steak, staff stop their clock. If a running clock shows the same reading on two consecutive polls (and that reading isn't `0000` or `6000`), it is recorded as a likely win in the `challenge_wins` table.
 
 - Wins are always recorded in the database. The `shouldReportWinners` flag (default `false`) only controls the live winner alert and the winners line in the end of day wrapup.
-- The winner alert includes a screencap of the full camera frame from the first poll that showed the stopped time, so the win can be checked by eye. While `shouldReportWinners` is enabled, the frames from the last 3 polls are kept in `screencaps/` and older ones are deleted.
+- The winner alert includes a screencap of the full camera frame from the last poll before the clock stopped, so the win can be checked by eye. While `shouldReportWinners` is enabled, the frames from the last 4 polls are kept in `screencaps/` and older ones are deleted.
 - A clock stopped within the first 2 minutes (a reading above `5800`) isn't counted. This is usually staff starting the wrong timer and stopping it again.
 - Each challenge can only be counted as a win once. The flag is cleared when the clock is reset to `0000` or `6000`, or a new challenge starts on that clock.
 - A failed OCR read skips the whole poll, so it doesn't break up the two consecutive readings.

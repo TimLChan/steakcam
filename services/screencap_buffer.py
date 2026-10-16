@@ -21,7 +21,7 @@ class ScreencapBuffer:
     ones are added, so at most *max_size* files are kept on disk.
     """
 
-    def __init__(self, directory: str = "screencaps", max_size: int = 3):
+    def __init__(self, directory: str = "screencaps", max_size: int = 4):
         self._directory = directory
         self._max_size = max_size
         self._entries: deque[Screencap] = deque()
@@ -38,12 +38,16 @@ class ScreencapBuffer:
         while len(self._entries) > self._max_size:
             self._remove(self._entries.popleft().path)
 
-    def first_showing(self, timer_index: int, value: int) -> str | None:
-        """Return the oldest frame where timer *timer_index* read *value*, i.e. when the clock stopped."""
-        for entry in self._entries:
+    def frame_before_stop(self, timer_index: int, value: int) -> str | None:
+        """Return the last frame before timer *timer_index* first read the stopped *value*.
+
+        This is the closest frame to when the challenger finished. Falls back to the first
+        frame showing *value* if there's no earlier one, or ``None`` if no frame shows it.
+        """
+        for index, entry in enumerate(self._entries):
             try:
                 if int(entry.readings[timer_index]) == value:
-                    return entry.path
+                    return self._entries[max(index - 1, 0)].path
             except (ValueError, IndexError):
                 continue
         return None

@@ -13,7 +13,7 @@ Out of necessity, this script has been built to provide steak challenge alerts.
 3. splits out each of the clocks individually as images
 4. for each of the image, performs ocr to extract the text
 5. sends an alert of the timer goes from 60:00 -> something else
-6. (beta) sends an alert when a running timer stops, which usually means someone has won, with a screencap from when the clock stopped. Enable with `"shouldReportWinners": true` in `config.json`
+6. (beta) sends an alert when a running timer stops, which usually means someone has won, with a screencap from just before the clock stopped. Enable with `"shouldReportWinners": true` in `config.json`
 
 The process repeats every minute to try catch changes to the clock
 
