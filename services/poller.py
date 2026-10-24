@@ -90,8 +90,9 @@ def run_once(
                                 helper.getDateTime(timezone),
                             )
 
-                            # Start or extend stream if enabled
-                            stream_manager.on_challenge_started(m3u8_url, transition.alert_event.time_remaining)
+                            # Start or extend stream if enabled (suppress on first poll like Discord)
+                            if not first:
+                                stream_manager.on_challenge_started(m3u8_url, transition.alert_event.time_remaining)
 
                         if transition.case == CASE_UNCHANGED:
                             continue
@@ -109,7 +110,15 @@ def run_once(
     # Check if stream should auto-stop
     stream_manager.tick()
 
-    sleep_time = random.randint(60, 90)
+    # Dynamic polling: shorter interval when stream is active
+    if stream_manager.is_streaming():
+        # More frequent checks when streaming (every 30-60s)
+        sleep_time = random.randint(30, 60)
+        helper.logmessage("stream active: using shorter poll interval")
+    else:
+        # Normal polling when not streaming (every 60-90s)
+        sleep_time = random.randint(60, 90)
+
     return daily_challenge_count, sleep_time
 
 
@@ -121,9 +130,15 @@ def run_forever(
     angelcam: AngelcamClient,
     pipeline: FramePipeline,
     notifier: DiscordNotifier,
+    stream_manager_ref_setter=None,  # Optional callback to set global ref
 ) -> None:
     daily_challenge_count = state.challenges.get_today_count(settings.timezone)
     stream_manager = StreamManager(settings)
+
+    # Allow main.py to store global reference for signal handler
+    if stream_manager_ref_setter is not None:
+        stream_manager_ref_setter(stream_manager)
+
     while True:
         daily_challenge_count, sleep_time = run_once(
             first=first,

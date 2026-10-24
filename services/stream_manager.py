@@ -63,6 +63,8 @@ class StreamManager:
         cmd = self._build_ffmpeg_command(m3u8_url)
 
         # Prepare log file
+        # WARNING: FFmpeg logs contain the full RTMP URL with stream key
+        # Treat files in logs/streaming/ as sensitive
         log_dir = Path("logs/streaming")
         log_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -116,7 +118,10 @@ class StreamManager:
         # Audio handling
         if audio_mode == "passthrough":
             # Transcode 8kHz mono → 44.1kHz stereo
+            # Explicitly map video stream 0 and audio stream 0
             cmd.extend([
+                "-map", "0:v:0",  # First video stream
+                "-map", "0:a:0",  # First audio stream
                 "-c:v", "copy",
                 "-c:a", "aac",
                 "-b:a", "128k",
@@ -126,6 +131,7 @@ class StreamManager:
         elif audio_mode == "silent":
             # Generate synthetic silent audio
             cmd.extend([
+                "-map", "0:v:0",  # First video stream
                 "-f", "lavfi",
                 "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
                 "-c:v", "copy",
@@ -135,11 +141,17 @@ class StreamManager:
             ])
         elif audio_mode == "none":
             # No audio (YouTube will reject, testing only)
-            cmd.extend(["-c:v", "copy", "-an"])
+            cmd.extend([
+                "-map", "0:v:0",  # First video stream
+                "-c:v", "copy",
+                "-an"
+            ])
         else:
             # Unknown mode: default to passthrough
             helper.logmessage(f"stream_manager: unknown audioMode '{audio_mode}', defaulting to passthrough")
             cmd.extend([
+                "-map", "0:v:0",
+                "-map", "0:a:0",
                 "-c:v", "copy",
                 "-c:a", "aac",
                 "-b:a", "128k",

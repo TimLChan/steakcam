@@ -207,3 +207,6 @@ config.json
 #*.jpg
 *.txt
 *.ts
+
+# Stream logs (contain sensitive RTMP URLs)
+logs/
