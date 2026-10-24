@@ -37,7 +37,14 @@ def run_once(
 
         daily_challenge_count = 0
         helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
-        sleep_time = random.randint(300, 600)
+
+        # Dynamic polling when closed: shorter interval if stream is active
+        if stream_manager.is_streaming():
+            sleep_time = random.randint(30, 60)
+            helper.logmessage("stream active while closed: using shorter poll interval")
+        else:
+            sleep_time = random.randint(300, 600)
+
         return daily_challenge_count, sleep_time
 
     if state.wrapup_sent_today:
@@ -110,15 +117,8 @@ def run_once(
     # Check if stream should auto-stop
     stream_manager.tick()
 
-    # Dynamic polling: shorter interval when stream is active
-    if stream_manager.is_streaming():
-        # More frequent checks when streaming (every 30-60s)
-        sleep_time = random.randint(30, 60)
-        helper.logmessage("stream active: using shorter poll interval")
-    else:
-        # Normal polling when not streaming (every 60-90s)
-        sleep_time = random.randint(60, 90)
-
+    # Normal polling when restaurant is open
+    sleep_time = random.randint(60, 90)
     return daily_challenge_count, sleep_time
 
 
