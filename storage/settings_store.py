@@ -4,7 +4,13 @@ import json
 import time
 
 import helper
-from config import CONFIG_FILE, DEFAULT_TIMEZONE, DEFAULT_VIDEO_URL
+from config import (
+    CONFIG_FILE,
+    DEFAULT_AUDIO_MODE,
+    DEFAULT_RTMP_URL,
+    DEFAULT_TIMEZONE,
+    DEFAULT_VIDEO_URL,
+)
 
 
 class SettingsStore:
@@ -105,11 +111,11 @@ class SettingsStore:
         if "streaming" not in data:
             data["streaming"] = {
                 "enabled": False,
-                "rtmpUrl": config.DEFAULT_RTMP_URL,
+                "rtmpUrl": DEFAULT_RTMP_URL,
                 "streamKey": "",
                 "publicStreamUrl": "",
                 "durationMinutes": 70,
-                "audioMode": config.DEFAULT_AUDIO_MODE,
+                "audioMode": DEFAULT_AUDIO_MODE,
             }
             dirty = True
             helper.logmessage("migration - streaming section added with defaults.")
@@ -131,7 +137,7 @@ class SettingsStore:
 
     @property
     def rtmp_url(self) -> str:
-        return self._data.get("streaming", {}).get("rtmpUrl", config.DEFAULT_RTMP_URL)
+        return self._data.get("streaming", ).get("rtmpUrl", DEFAULT_RTMP_URL)
 
     @property
     def stream_key(self) -> str:
@@ -149,7 +155,7 @@ class SettingsStore:
 
     @property
     def stream_audio_mode(self) -> str:
-        return self._data.get("streaming", {}).get("audioMode", config.DEFAULT_AUDIO_MODE)
+        return self._data.get("streaming", {}).get("audioMode", DEFAULT_AUDIO_MODE)
 
     @property
     def stream_destination(self) -> str | None:
