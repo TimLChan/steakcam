@@ -38,8 +38,12 @@ def run_once(
         daily_challenge_count = 0
         helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
 
+        # Check if stream should auto-stop
+        now = int(time.time())
+        stream_manager.tick(now)
+
         # Dynamic polling when closed: shorter interval if stream is active
-        if stream_manager.is_streaming():
+        if stream_manager.is_streaming:
             sleep_time = random.randint(30, 60)
             helper.logmessage("stream active while closed: using shorter poll interval")
         else:
@@ -89,17 +93,24 @@ def run_once(
 
                             daily_challenge_count += 1
                             state.challenges.increment_today(settings.timezone)
+
+                            # Determine stream URL: use YouTube if streaming is enabled and configured
+                            stream_url = settings.video_url
+                            if settings.stream_enabled and settings.public_stream_url:
+                                stream_url = settings.public_stream_url
+
                             notifier.send_message(
                                 first,
                                 transition.alert_event.timer_position,
                                 transition.alert_event.time_remaining,
-                                settings.video_url,
+                                stream_url,
                                 helper.getDateTime(timezone),
                             )
 
                             # Start or extend stream if enabled (suppress on first poll like Discord)
                             if not first:
-                                stream_manager.on_challenge_started(m3u8_url, transition.alert_event.time_remaining)
+                                now = int(time.time())
+                                stream_manager.on_challenge_started(m3u8_url, now)
 
                         if transition.case == CASE_UNCHANGED:
                             continue
@@ -115,7 +126,8 @@ def run_once(
                 helper.writelogmessage(f"expecting 6 times, got {len(live_timers)}")
 
     # Check if stream should auto-stop
-    stream_manager.tick()
+    now = int(time.time())
+    stream_manager.tick(now)
 
     # Normal polling when restaurant is open
     sleep_time = random.randint(60, 90)
@@ -130,14 +142,9 @@ def run_forever(
     angelcam: AngelcamClient,
     pipeline: FramePipeline,
     notifier: DiscordNotifier,
-    stream_manager_ref_setter=None,  # Optional callback to set global ref
+    stream_manager: StreamManager,
 ) -> None:
     daily_challenge_count = state.challenges.get_today_count(settings.timezone)
-    stream_manager = StreamManager(settings)
-
-    # Allow main.py to store global reference for signal handler
-    if stream_manager_ref_setter is not None:
-        stream_manager_ref_setter(stream_manager)
 
     while True:
         daily_challenge_count, sleep_time = run_once(
