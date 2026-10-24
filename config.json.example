@@ -24,6 +24,14 @@
     },
     "timezone": "US/Central",
     "shouldSendWrapup": true,
+    "streaming": {
+        "enabled": false,
+        "rtmpUrl": "rtmp://a.rtmp.youtube.com/live2",
+        "streamKey": "",
+        "publicStreamUrl": "",
+        "durationMinutes": 70,
+        "audioMode": "passthrough"
+    },
     "timers": [
         [6000, false, 1749955286],
         [6000, false, 1749955286],

@@ -101,6 +101,19 @@ class SettingsStore:
             dirty = True
             helper.logmessage(f"migration - timezone defaulted to {DEFAULT_TIMEZONE}.")
 
+        # streaming section
+        if "streaming" not in data:
+            data["streaming"] = {
+                "enabled": False,
+                "rtmpUrl": config.DEFAULT_RTMP_URL,
+                "streamKey": "",
+                "publicStreamUrl": "",
+                "durationMinutes": 70,
+                "audioMode": config.DEFAULT_AUDIO_MODE,
+            }
+            dirty = True
+            helper.logmessage("migration - streaming section added with defaults.")
+
         if dirty:
             self._save(data)
 
@@ -111,3 +124,37 @@ class SettingsStore:
         with open(self._path, "w") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
             f.flush()
+
+    @property
+    def streaming_enabled(self) -> bool:
+        return self._data.get("streaming", {}).get("enabled", False)
+
+    @property
+    def rtmp_url(self) -> str:
+        return self._data.get("streaming", {}).get("rtmpUrl", config.DEFAULT_RTMP_URL)
+
+    @property
+    def stream_key(self) -> str:
+        return self._data.get("streaming", {}).get("streamKey", "")
+
+    @property
+    def public_stream_url(self) -> str | None:
+        url = self._data.get("streaming", {}).get("publicStreamUrl", "")
+        return url if url else None
+
+    @property
+    def stream_duration_seconds(self) -> int:
+        minutes = self._data.get("streaming", {}).get("durationMinutes", 70)
+        return minutes * 60
+
+    @property
+    def stream_audio_mode(self) -> str:
+        return self._data.get("streaming", {}).get("audioMode", config.DEFAULT_AUDIO_MODE)
+
+    @property
+    def stream_destination(self) -> str | None:
+        """Returns rtmp://url/streamKey if stream_key exists, else None"""
+        key = self.stream_key
+        if not key:
+            return None
+        return f"{self.rtmp_url}/{key}"

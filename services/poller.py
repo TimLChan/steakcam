@@ -7,6 +7,7 @@ from clients.discord_client import DiscordNotifier
 from config import DEFAULT_CLOSE_TIME, DEFAULT_OPEN_TIME
 from models import TimerState
 from services.frame_pipeline import FramePipeline
+from services.stream_manager import StreamManager
 from services.timer_engine import CASE_IDLE_TRIGGER, CASE_UNCHANGED, evaluate_timer_transition
 from storage.settings_store import SettingsStore
 from storage.state_store import StateStore
@@ -21,6 +22,7 @@ def run_once(
     angelcam: AngelcamClient,
     pipeline: FramePipeline,
     notifier: DiscordNotifier,
+    stream_manager: StreamManager,
 ) -> tuple[int, int]:
     timezone = settings.timezone
     is_within = helper.withinTimePeriod(DEFAULT_OPEN_TIME, DEFAULT_CLOSE_TIME, timezone)
@@ -88,6 +90,9 @@ def run_once(
                                 helper.getDateTime(timezone),
                             )
 
+                            # Start or extend stream if enabled
+                            stream_manager.on_challenge_started(m3u8_url, transition.alert_event.time_remaining)
+
                         if transition.case == CASE_UNCHANGED:
                             continue
 
@@ -100,6 +105,9 @@ def run_once(
 
             else:
                 helper.writelogmessage(f"expecting 6 times, got {len(live_timers)}")
+
+    # Check if stream should auto-stop
+    stream_manager.tick()
 
     sleep_time = random.randint(60, 90)
     return daily_challenge_count, sleep_time
@@ -115,6 +123,7 @@ def run_forever(
     notifier: DiscordNotifier,
 ) -> None:
     daily_challenge_count = state.challenges.get_today_count(settings.timezone)
+    stream_manager = StreamManager(settings)
     while True:
         daily_challenge_count, sleep_time = run_once(
             first=first,
@@ -124,6 +133,7 @@ def run_forever(
             angelcam=angelcam,
             pipeline=pipeline,
             notifier=notifier,
+            stream_manager=stream_manager,
         )
         first = False
         helper.logmessage(f"========== sleeping for {sleep_time} seconds ==========")
