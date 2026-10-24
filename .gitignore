@@ -203,6 +203,7 @@ ignore/*
 live/*
 errors/*
 config.json
+challenges.db
 
 #*.jpg
 *.txt
@@ -210,3 +211,7 @@ config.json
 
 # Stream logs (contain sensitive RTMP URLs)
 logs/
+
+# Agents
+CLAUDE.md
+AGENTS.md
