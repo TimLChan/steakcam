@@ -1,3 +1,4 @@
+import atexit
 import requests
 import signal
 import sys
@@ -5,6 +6,7 @@ import helper
 from clients.angelcam_client import AngelcamClient
 from clients.discord_client import DiscordNotifier
 from services.frame_pipeline import FramePipeline
+from services.stream_manager import StreamManager
 from services.poller import run_forever
 from storage.settings_store import SettingsStore
 from storage.state_store import StateStore
@@ -26,17 +28,14 @@ session = requests.Session()
 angelcam = AngelcamClient(session)
 notifier = DiscordNotifier(settings.discord_config, session)
 pipeline = FramePipeline(ocr, settings.filter_config)
+stream_manager = StreamManager(settings)
 
 first = True  # debug flag: suppresses alerts on first poll cycle
-
-# Global reference to stream_manager for signal handler
-_stream_manager = None
 
 def cleanup_handler(signum, frame):
     """Ensure FFmpeg process is terminated on exit."""
     helper.logmessage(f"Received signal {signum}, shutting down gracefully...")
-    if _stream_manager is not None:
-        _stream_manager.graceful_shutdown()
+    stream_manager.stop_stream(reason="signal")
     sys.exit(0)
 
 if __name__ == "__main__":
@@ -44,9 +43,8 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, cleanup_handler)   # Ctrl+C
     signal.signal(signal.SIGTERM, cleanup_handler)  # systemd stop / kill
 
-    def set_stream_manager_ref(sm):
-        global _stream_manager
-        _stream_manager = sm
+    # Ensure stream stops on normal exit
+    atexit.register(stream_manager.stop_stream, reason="shutdown")
 
     run_forever(
         first=first,
@@ -55,5 +53,5 @@ if __name__ == "__main__":
         angelcam=angelcam,
         pipeline=pipeline,
         notifier=notifier,
-        stream_manager_ref_setter=set_stream_manager_ref,
+        stream_manager=stream_manager,
     )

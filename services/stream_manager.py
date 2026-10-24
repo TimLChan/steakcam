@@ -115,6 +115,13 @@ class StreamManager:
             "-i", m3u8_url,
         ]
 
+        # Add synthetic audio input for silent mode
+        if audio_mode == "silent":
+            cmd.extend([
+                "-f", "lavfi",
+                "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+            ])
+
         # Audio handling
         if audio_mode == "passthrough":
             # Transcode 8kHz mono → 44.1kHz stereo
@@ -129,11 +136,10 @@ class StreamManager:
                 "-ac", "2",
             ])
         elif audio_mode == "silent":
-            # Generate synthetic silent audio
+            # Use synthetic silent audio from input 1
             cmd.extend([
-                "-map", "0:v:0",  # First video stream
-                "-f", "lavfi",
-                "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+                "-map", "0:v:0",  # Video from input 0
+                "-map", "1:a:0",  # Audio from input 1 (anullsrc)
                 "-c:v", "copy",
                 "-c:a", "aac",
                 "-b:a", "128k",
@@ -159,8 +165,8 @@ class StreamManager:
                 "-ac", "2",
             ])
 
+        # Streaming output
         cmd.extend([
-            "-flags", "+global_header",
             "-f", "flv",
             destination,
         ])
