@@ -94,17 +94,19 @@ def run_once(
                             daily_challenge_count += 1
                             state.challenges.increment_today(settings.timezone)
 
-                            # Determine stream URL: use YouTube if streaming is enabled and configured
-                            stream_url = settings.video_url
-                            if settings.stream_enabled and settings.public_stream_url:
-                                stream_url = settings.public_stream_url
+                            # Prepare stream URLs for Discord
+                            angelcam_url = settings.video_url
+                            youtube_url = None
+                            if settings.streaming_enabled and settings.public_stream_url:
+                                youtube_url = settings.public_stream_url
 
                             notifier.send_message(
                                 first,
                                 transition.alert_event.timer_position,
                                 transition.alert_event.time_remaining,
-                                stream_url,
+                                angelcam_url,
                                 helper.getDateTime(timezone),
+                                youtube_stream_url=youtube_url,
                             )
 
                             # Start or extend stream if enabled (suppress on first poll like Discord)
