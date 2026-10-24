@@ -137,7 +137,7 @@ class SettingsStore:
 
     @property
     def rtmp_url(self) -> str:
-        return self._data.get("streaming", ).get("rtmpUrl", DEFAULT_RTMP_URL)
+        return self._data.get("streaming", {}).get("rtmpUrl", DEFAULT_RTMP_URL)
 
     @property
     def stream_key(self) -> str:
