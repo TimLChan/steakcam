@@ -63,7 +63,7 @@ class DiscordNotifier:
             stream_url: URL to the live stream.
             current_time: Formatted current time string for the embed.
         """
-        if first:
+        if first or time_remaining == 5000:
             return
 
         timer_remaining_str = str(time_remaining)

@@ -70,8 +70,8 @@ def run_once(
                             continue
 
                         if transition.alert_event is not None:
-                            # Sanity guard - likely OCR misread
-                            if transition.alert_event.time_remaining < 3500:
+                            # Sanity guard - likely OCR misread or visual bug
+                            if transition.alert_event.time_remaining < 3500 or transition.alert_event.time_remaining == 5000:
                                 continue
                             # Additional sanity guard added for timer 2 due to CCTV text overlays
                             if transition.alert_event.time_remaining < 5700 and transition.alert_event.timer_position == 2:

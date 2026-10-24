@@ -61,8 +61,8 @@ def evaluate_timer_transition(timer_index: int, current_time: int, tracked_timer
     tracked_time = tracked_timer.tracked_time
     last_reset_time = tracked_timer.last_reset_time
 
-    # SPECIAL CASE: Ignore 5000 readings for timer 1 due to overlapping text
-    if timer_index == 0 and current_time == 5000:
+    # SPECIAL CASE: Ignore 5000 readings (50:00) as they do not signal the start of a steak challenge (likely a visual bug)
+    if current_time == 5000:
         return TimerTransition(timer_state=tracked_timer, case=CASE_UNCHANGED)
 
     # CASE 0: Ignore 0 readings when we are already idle to prevent bouncing.
