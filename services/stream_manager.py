@@ -101,15 +101,14 @@ class StreamManager:
         destination = self._settings.stream_destination
         audio_mode = self._settings.stream_audio_mode
 
-        # Format headers as single CRLF-separated string
-        header_str = "\r\n".join([f"{k}: {v}" for k, v in config.HEADERS.items()])
+        # Format headers as single CRLF-separated string with trailing CRLF
+        header_str = "\r\n".join([f"{k}: {v}" for k, v in config.HEADERS.items()]) + "\r\n"
 
         cmd = [
             "ffmpeg",
             "-re",  # Read at native frame rate
             "-headers", header_str,  # AngelCam authentication
             "-reconnect", "1",
-            "-reconnect_at_eof", "1",
             "-reconnect_streamed", "1",
             "-reconnect_delay_max", "5",
             "-i", m3u8_url,
