@@ -7,6 +7,7 @@ from clients.discord_client import DiscordNotifier
 from config import DEFAULT_CLOSE_TIME, DEFAULT_OPEN_TIME
 from models import TimerState
 from services.frame_pipeline import FramePipeline
+from services.stream_manager import StreamManager
 from services.timer_engine import CASE_IDLE_TRIGGER, CASE_UNCHANGED, evaluate_timer_transition
 from storage.settings_store import SettingsStore
 from storage.state_store import StateStore
@@ -21,6 +22,7 @@ def run_once(
     angelcam: AngelcamClient,
     pipeline: FramePipeline,
     notifier: DiscordNotifier,
+    stream_manager: StreamManager,
 ) -> tuple[int, int]:
     timezone = settings.timezone
     is_within = helper.withinTimePeriod(DEFAULT_OPEN_TIME, DEFAULT_CLOSE_TIME, timezone)
@@ -35,7 +37,18 @@ def run_once(
 
         daily_challenge_count = 0
         helper.logmessage(f"restaurant is closed, current time is {helper.getTime(timezone)}")
-        sleep_time = random.randint(300, 600)
+
+        # Check if stream should auto-stop
+        now = int(time.time())
+        stream_manager.tick(now)
+
+        # Dynamic polling when closed: shorter interval if stream is active
+        if stream_manager.is_streaming:
+            sleep_time = random.randint(30, 60)
+            helper.logmessage("stream active while closed: using shorter poll interval")
+        else:
+            sleep_time = random.randint(300, 600)
+
         return daily_challenge_count, sleep_time
 
     if state.wrapup_sent_today:
@@ -80,13 +93,26 @@ def run_once(
 
                             daily_challenge_count += 1
                             state.challenges.increment_today(settings.timezone)
+
+                            # Prepare stream URLs for Discord
+                            angelcam_url = settings.video_url
+                            youtube_url = None
+                            if settings.streaming_enabled and settings.public_stream_url:
+                                youtube_url = settings.public_stream_url
+
                             notifier.send_message(
                                 first,
                                 transition.alert_event.timer_position,
                                 transition.alert_event.time_remaining,
-                                settings.video_url,
+                                angelcam_url,
                                 helper.getDateTime(timezone),
+                                youtube_stream_url=youtube_url,
                             )
+
+                            # Start or extend stream if enabled (suppress on first poll like Discord)
+                            if not first:
+                                now = int(time.time())
+                                stream_manager.on_challenge_started(m3u8_url, now)
 
                         if transition.case == CASE_UNCHANGED:
                             continue
@@ -101,6 +127,11 @@ def run_once(
             else:
                 helper.writelogmessage(f"expecting 6 times, got {len(live_timers)}")
 
+    # Check if stream should auto-stop
+    now = int(time.time())
+    stream_manager.tick(now)
+
+    # Normal polling when restaurant is open
     sleep_time = random.randint(60, 90)
     return daily_challenge_count, sleep_time
 
@@ -113,8 +144,10 @@ def run_forever(
     angelcam: AngelcamClient,
     pipeline: FramePipeline,
     notifier: DiscordNotifier,
+    stream_manager: StreamManager,
 ) -> None:
     daily_challenge_count = state.challenges.get_today_count(settings.timezone)
+
     while True:
         daily_challenge_count, sleep_time = run_once(
             first=first,
@@ -124,6 +157,7 @@ def run_forever(
             angelcam=angelcam,
             pipeline=pipeline,
             notifier=notifier,
+            stream_manager=stream_manager,
         )
         first = False
         helper.logmessage(f"========== sleeping for {sleep_time} seconds ==========")

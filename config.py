@@ -13,6 +13,11 @@ DB_FILE = "challenges.db"
 DEFAULT_VIDEO_URL = "https://v.angelcam.com/iframe?v=9klzdgn2y4&autoplay=1"
 DEFAULT_STREAM_URL = "https://www.bigtexan.com/live-stream/"
 
+# Streaming defaults
+DEFAULT_STREAM_DURATION_SECONDS = 70 * 60  # 70 minutes (4200 seconds)
+DEFAULT_RTMP_URL = "rtmp://a.rtmp.youtube.com/live2"
+DEFAULT_AUDIO_MODE = "passthrough"  # passthrough: transcode 8kHz mono → 44.1kHz stereo
+
 # HTTP headers for AngelCam requests
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
