@@ -107,6 +107,7 @@ class StreamManager:
         cmd = [
             "ffmpeg",
             "-re",  # Read at native frame rate
+            "-fflags", "+discardcorrupt",  # Discard corrupt packets
             "-headers", header_str,  # AngelCam authentication
             "-reconnect", "1",
             "-reconnect_streamed", "1",
