@@ -68,6 +68,8 @@ class TestStreamManager(unittest.TestCase):
         # Check key flags
         self.assertIn("ffmpeg", cmd)
         self.assertIn("-re", cmd)
+        self.assertIn("-fflags", cmd)
+        self.assertIn("+discardcorrupt", cmd)
         self.assertIn("-headers", cmd)
         self.assertIn("http://test.m3u8", cmd)
         self.assertIn("rtmp://youtube.com/live2/test-key", cmd)
