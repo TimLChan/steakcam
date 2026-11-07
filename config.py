@@ -16,7 +16,7 @@ DEFAULT_STREAM_URL = "https://www.bigtexan.com/live-stream/"
 # Streaming defaults
 DEFAULT_STREAM_DURATION_SECONDS = 70 * 60  # 70 minutes (4200 seconds)
 DEFAULT_RTMP_URL = "rtmp://live.restream.io/live"
-DEFAULT_AUDIO_MODE = "passthrough"  # passthrough: transcode 8kHz mono → 44.1kHz stereo
+DEFAULT_AUDIO_MODE = "silent"  # silent: synthetic silent audio via anullsrc (44.1kHz stereo)
 
 # HTTP headers for AngelCam requests
 HEADERS = {

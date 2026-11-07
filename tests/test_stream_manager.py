@@ -228,6 +228,14 @@ class TestStreamManager(unittest.TestCase):
         cmd = mock_popen.call_args[0][0]
         self.assertIn("-an", cmd)
 
+        # Test unknown mode defaults to silent
+        settings.stream_audio_mode = "invalid_mode"
+        manager = StreamManager(settings, popen_fn=mock_popen)
+        manager.on_challenge_started("http://test.m3u8", 4000)
+        cmd = mock_popen.call_args[0][0]
+        self.assertTrue(any("anullsrc" in arg for arg in cmd))
+        self.assertIn("-shortest", cmd)
+
     @patch("helper.logmessage")
     @patch("services.stream_manager.Path")
     @patch("builtins.open", new_callable=MagicMock)

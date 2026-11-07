@@ -115,8 +115,8 @@ class StreamManager:
             "-i", m3u8_url,
         ]
 
-        # Add synthetic audio input for silent mode
-        if audio_mode == "silent":
+        # Add synthetic audio input for silent mode (and unknown mode fallback)
+        if audio_mode == "silent" or audio_mode not in ("passthrough", "none"):
             cmd.extend([
                 "-f", "lavfi",
                 "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
@@ -135,16 +135,6 @@ class StreamManager:
                 "-ar", "44100",
                 "-ac", "2",
             ])
-        elif audio_mode == "silent":
-            # Use synthetic silent audio from input 1
-            cmd.extend([
-                "-map", "0:v:0",  # Video from input 0
-                "-map", "1:a:0",  # Audio from input 1 (anullsrc)
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-b:a", "128k",
-                "-shortest",  # Stop when video ends
-            ])
         elif audio_mode == "none":
             # No audio (streaming platforms like YouTube will reject, testing only)
             cmd.extend([
@@ -153,16 +143,16 @@ class StreamManager:
                 "-an"
             ])
         else:
-            # Unknown mode: default to passthrough
-            helper.logmessage(f"stream_manager: unknown audioMode '{audio_mode}', defaulting to passthrough")
+            if audio_mode != "silent":
+                helper.logmessage(f"stream_manager: unknown audioMode '{audio_mode}', defaulting to silent")
+            # Use synthetic silent audio from input 1
             cmd.extend([
-                "-map", "0:v:0",
-                "-map", "0:a:0",
+                "-map", "0:v:0",  # Video from input 0
+                "-map", "1:a:0",  # Audio from input 1 (anullsrc)
                 "-c:v", "copy",
                 "-c:a", "aac",
                 "-b:a", "128k",
-                "-ar", "44100",
-                "-ac", "2",
+                "-shortest",  # Stop when video ends
             ])
 
         # Streaming output
