@@ -1,4 +1,4 @@
-"""Manages FFmpeg streaming lifecycle for YouTube Live."""
+"""Manages FFmpeg streaming lifecycle for Restream."""
 
 import subprocess
 import time
@@ -11,7 +11,7 @@ from storage.settings_store import SettingsStore
 
 
 class StreamManager:
-    """Manages FFmpeg subprocess for YouTube Live streaming."""
+    """Manages FFmpeg subprocess for Restream streaming."""
 
     def __init__(self, settings: SettingsStore, popen_fn=subprocess.Popen):
         self._settings = settings
@@ -146,7 +146,7 @@ class StreamManager:
                 "-shortest",  # Stop when video ends
             ])
         elif audio_mode == "none":
-            # No audio (YouTube will reject, testing only)
+            # No audio (streaming platforms like YouTube will reject, testing only)
             cmd.extend([
                 "-map", "0:v:0",  # First video stream
                 "-c:v", "copy",

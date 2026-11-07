@@ -16,6 +16,13 @@ Out of necessity, this script has been built to provide steak challenge alerts.
 
 The process repeats every minute to try catch changes to the clock
 
+### live restreaming
+
+When a challenge is detected, steakcam can automatically re-stream the AngelCam feed to an RTMP endpoint (default: Restream at `rtmp://live.restream.io/live`) using FFmpeg.
+
+> [!NOTE]
+> **Streaming to YouTube (YMMV):** Testing has found that ad-hoc streams directly to YouTube don't really work, unless the live page has been visited. The more stable approach is to stream to Restream and have Restream relay the feed to YouTube.
+
 ## why
 
 bored
@@ -29,6 +36,7 @@ bored
 - [x] logic to ocr the image
 - [x] track changes to the clocks
 - [x] send an alert on discord
+- [x] restream challenge video feed via rtmp
 
 ## i really want to finetune the ocr model further
 

@@ -45,7 +45,7 @@ class TestStreamManager(unittest.TestCase):
         """Verify FFmpeg command structure on initial stream start."""
         settings = MagicMock(spec=SettingsStore)
         settings.streaming_enabled = True
-        settings.stream_destination = "rtmp://youtube.com/live2/test-key"
+        settings.stream_destination = "rtmp://live.restream.io/live/test-key"
         settings.stream_duration_seconds = 4200
         settings.stream_audio_mode = "passthrough"
 
@@ -72,7 +72,7 @@ class TestStreamManager(unittest.TestCase):
         self.assertIn("+discardcorrupt", cmd)
         self.assertIn("-headers", cmd)
         self.assertIn("http://test.m3u8", cmd)
-        self.assertIn("rtmp://youtube.com/live2/test-key", cmd)
+        self.assertIn("rtmp://live.restream.io/live/test-key", cmd)
         self.assertIn("-c:v", cmd)
         self.assertIn("copy", cmd)
 
@@ -83,7 +83,7 @@ class TestStreamManager(unittest.TestCase):
         """Verify end_time = max(current, now + 4200) on second challenge."""
         settings = MagicMock(spec=SettingsStore)
         settings.streaming_enabled = True
-        settings.stream_destination = "rtmp://youtube.com/live2/test-key"
+        settings.stream_destination = "rtmp://live.restream.io/live/test-key"
         settings.stream_duration_seconds = 4200
         settings.stream_audio_mode = "passthrough"
 
@@ -113,7 +113,7 @@ class TestStreamManager(unittest.TestCase):
         """Verify clean shutdown when duration expires."""
         settings = MagicMock(spec=SettingsStore)
         settings.streaming_enabled = True
-        settings.stream_destination = "rtmp://youtube.com/live2/test-key"
+        settings.stream_destination = "rtmp://live.restream.io/live/test-key"
         settings.stream_duration_seconds = 4200
         settings.stream_audio_mode = "passthrough"
 
@@ -144,7 +144,7 @@ class TestStreamManager(unittest.TestCase):
         """Verify SIGTERM, 5s timeout, SIGKILL."""
         settings = MagicMock(spec=SettingsStore)
         settings.streaming_enabled = True
-        settings.stream_destination = "rtmp://youtube.com/live2/test-key"
+        settings.stream_destination = "rtmp://live.restream.io/live/test-key"
         settings.stream_duration_seconds = 4200
         settings.stream_audio_mode = "passthrough"
 
@@ -171,7 +171,7 @@ class TestStreamManager(unittest.TestCase):
         """Logs error and resets state when FFmpeg exits unexpectedly."""
         settings = MagicMock(spec=SettingsStore)
         settings.streaming_enabled = True
-        settings.stream_destination = "rtmp://youtube.com/live2/test-key"
+        settings.stream_destination = "rtmp://live.restream.io/live/test-key"
         settings.stream_duration_seconds = 4200
         settings.stream_audio_mode = "passthrough"
 
@@ -196,7 +196,7 @@ class TestStreamManager(unittest.TestCase):
         """Verify commands for silent, passthrough, none."""
         settings = MagicMock(spec=SettingsStore)
         settings.streaming_enabled = True
-        settings.stream_destination = "rtmp://youtube.com/live2/test-key"
+        settings.stream_destination = "rtmp://live.restream.io/live/test-key"
         settings.stream_duration_seconds = 4200
 
         mock_process = MagicMock()
@@ -235,7 +235,7 @@ class TestStreamManager(unittest.TestCase):
         """Verify single -headers flag with CRLF-separated values."""
         settings = MagicMock(spec=SettingsStore)
         settings.streaming_enabled = True
-        settings.stream_destination = "rtmp://youtube.com/live2/test-key"
+        settings.stream_destination = "rtmp://live.restream.io/live/test-key"
         settings.stream_duration_seconds = 4200
         settings.stream_audio_mode = "passthrough"
 

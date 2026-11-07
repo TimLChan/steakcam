@@ -26,7 +26,7 @@
     "shouldSendWrapup": true,
     "streaming": {
         "enabled": false,
-        "rtmpUrl": "rtmp://a.rtmp.youtube.com/live2",
+        "rtmpUrl": "rtmp://live.restream.io/live",
         "streamKey": "",
         "publicStreamUrl": "",
         "durationMinutes": 70,

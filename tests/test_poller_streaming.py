@@ -1,8 +1,13 @@
 """Integration tests for poller-streaming interaction."""
 
+import sys
 import time
 import unittest
 from unittest.mock import MagicMock, call, patch
+
+# Ensure test can run even if optional OCR packages are not installed in the environment
+if "paddleocr" not in sys.modules:
+    sys.modules["paddleocr"] = MagicMock()
 
 from models import TimerState
 from services.poller import run_once
