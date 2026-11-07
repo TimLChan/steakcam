@@ -24,6 +24,14 @@
     },
     "timezone": "US/Central",
     "shouldSendWrapup": true,
+    "streaming": {
+        "enabled": false,
+        "rtmpUrl": "rtmp://live.restream.io/live",
+        "streamKey": "",
+        "publicStreamUrl": "",
+        "durationMinutes": 70,
+        "audioMode": "silent"
+    },
     "timers": [
         [6000, false, 1749955286],
         [6000, false, 1749955286],
