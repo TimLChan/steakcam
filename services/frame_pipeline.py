@@ -6,7 +6,7 @@ import time
 import helper
 from clients.ocr_client import OcrClient
 from config import CLOCK_CROP_DEFINITIONS
-from filters import colour_filter as CustomFilter
+from filters import overlay_filter as CustomFilter
 
 
 class FramePipeline:
